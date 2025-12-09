@@ -9,10 +9,11 @@ class StartupView extends StackedView<StartupViewModel> {
   const StartupView({Key? key}) : super(key: key);
 
   @override
-  Widget builder(BuildContext context, StartupViewModel viewModel, Widget? child) {
-    return Scaffold(
+  Widget builder(
+      BuildContext context, StartupViewModel viewModel, Widget? child) {
+    return const Scaffold(
       backgroundColor: Colors.white,
-      body: const Center(child: _BouncingLogo()),
+      body: Center(child: _BouncingLogo()),
     );
   }
 

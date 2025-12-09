@@ -1,204 +1,303 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:stacked/stacked.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/tasks/task_detail_view.dart';
+import 'package:schoolable/ui/views/tasks/task_model.dart';
+import 'package:schoolable/ui/views/tasks/tasks_viewmodel.dart';
+import 'package:schoolable/ui/common/widgets/app_avatar.dart'; // Added import
 
-class Task {
-  Task({
-    required this.title,
-    required this.description,
-    required this.due,
-    required this.status,
-    required this.priority,
-    required this.tag,
-    required this.assignee,
-  });
-
-  final String title;
-  final String description;
-  final String due;
-  final String status;
-  final String priority;
-  final String tag;
-  final String assignee;
-}
-
-class TasksView extends StatefulWidget {
+class TasksView extends StackedView<TasksViewModel> {
   const TasksView({Key? key}) : super(key: key);
 
   @override
-  State<TasksView> createState() => _TasksViewState();
-}
-
-class _TasksViewState extends State<TasksView> {
-  final TextEditingController _searchController = TextEditingController();
-
-  final List<Task> _tasks = [
-    Task(
-      title: 'Design onboarding flow',
-      description: 'Refresh the screens and illustrations to match mobile ARP.',
-      due: 'Today · 4:00 PM',
-      status: 'In Progress',
-      priority: 'High',
-      tag: 'Design',
-      assignee: 'Olivia',
-    ),
-    Task(
-      title: 'QA attendance flow',
-      description: 'Test camera + location capture on iOS and Android.',
-      due: 'Today · 6:00 PM',
-      status: 'Pending',
-      priority: 'Medium',
-      tag: 'QA',
-      assignee: 'Alex',
-    ),
-    Task(
-      title: 'Draft announcements copy',
-      description: 'Prepare October release note for mobile staff.',
-      due: 'Tomorrow',
-      status: 'Pending',
-      priority: 'Low',
-      tag: 'Content',
-      assignee: 'Sarah',
-    ),
-    Task(
-      title: 'Implement task detail view',
-      description: 'Add detail screen with attachments and comments scaffold.',
-      due: 'Fri · 11:00 AM',
-      status: 'In Progress',
-      priority: 'High',
-      tag: 'Frontend',
-      assignee: 'Michael',
-    ),
-    Task(
-      title: 'Fix chat unread badge',
-      description: 'Unread counter mismatch on DM list when messages sync.',
-      due: 'Mon',
-      status: 'Blocked',
-      priority: 'Medium',
-      tag: 'Backend',
-      assignee: 'Rita',
-    ),
-  ];
-
-  String _query = '';
-
-  List<Task> get _filteredTasks {
-    if (_query.isEmpty) return _tasks;
-    return _tasks
-        .where((task) =>
-            task.title.toLowerCase().contains(_query) ||
-            task.description.toLowerCase().contains(_query) ||
-            task.tag.toLowerCase().contains(_query))
-        .toList();
+  Widget builder(
+      BuildContext context, TasksViewModel viewModel, Widget? child) {
+    return Scaffold(
+      backgroundColor: kcBackgroundColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 20),
+              _buildMetrics(viewModel),
+              const SizedBox(height: 20),
+              _buildSearchAndFilters(viewModel),
+              const SizedBox(height: 20),
+              Expanded(
+                child: viewModel.isBusy
+                    ? const Center(child: CupertinoActivityIndicator())
+                    : viewModel.tasks.isEmpty
+                        ? CustomScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              CupertinoSliverRefreshControl(
+                                  onRefresh: viewModel.fetchTasks),
+                              const SliverFillRemaining(
+                                child: Center(child: Text('No tasks found')),
+                              ),
+                            ],
+                          )
+                        : CustomScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            slivers: [
+                              CupertinoSliverRefreshControl(
+                                  onRefresh: viewModel.fetchTasks),
+                              SliverList(
+                                delegate: SliverChildBuilderDelegate(
+                                  (context, index) {
+                                    final task = viewModel.tasks[index];
+                                    return Padding(
+                                      padding:
+                                          const EdgeInsets.only(bottom: 12),
+                                      child: _TaskCard(
+                                        task: task,
+                                        onTap: () async {
+                                          await Navigator.of(context).push(
+                                            MaterialPageRoute(
+                                              builder: (_) =>
+                                                  TaskDetailView(task: task),
+                                            ),
+                                          );
+                                          // Refresh on return
+                                          viewModel.fetchTasks();
+                                        },
+                                      ),
+                                    );
+                                  },
+                                  childCount: viewModel.tasks.length,
+                                ),
+                              ),
+                            ],
+                          ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
+  TasksViewModel viewModelBuilder(BuildContext context) => TasksViewModel();
 
   @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
+  void onViewModelReady(TasksViewModel viewModel) => viewModel.initialize();
+
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'My Tasks',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    color: kcTextColor,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: kcBorderColor),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child:
-                      const Icon(Icons.more_horiz, color: kcTextMutedColor, size: 20),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: kcBorderColor),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (value) {
-                  setState(() {
-                    _query = value.toLowerCase();
-                  });
-                },
-                decoration: InputDecoration(
-                  hintText: 'Search tasks by title or tag',
-                  hintStyle:
-                      const TextStyle(color: kcTextMutedColor, fontSize: 14),
-                  prefixIcon:
-                      const Icon(Icons.search_rounded, color: kcTextMutedColor),
-                  suffixIcon: _query.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.close, color: kcTextMutedColor),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() => _query = '');
-                          },
-                        )
-                      : null,
-                  border: InputBorder.none,
-                ),
+            Text(
+              'Task Management',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w600,
+                color: kcTextColor,
               ),
             ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: ListView.separated(
-                itemCount: _filteredTasks.length,
-                separatorBuilder: (context, index) =>
-                    const SizedBox(height: 12),
-                itemBuilder: (context, index) {
-                  final task = _filteredTasks[index];
-                  return _TaskCard(
-                    task: task,
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => TaskDetailView(task: task),
-                        ),
-                      );
-                    },
-                  );
-                },
+            SizedBox(height: 4),
+            Text(
+              'Track your assigned tasks',
+              style: TextStyle(
+                fontSize: 13,
+                color: kcTextMutedColor,
               ),
             ),
           ],
+        ),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: kcBorderColor),
+          ),
+          child:
+              const Icon(Icons.more_horiz, color: kcTextMutedColor, size: 20),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMetrics(TasksViewModel viewModel) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _MetricCard(
+            label: 'Total Tasks',
+            value: viewModel.totalCount.toString(),
+            icon: Icons.access_time,
+            color: kcPrimaryColor,
+          ),
+          const SizedBox(width: 12),
+          _MetricCard(
+            label: 'In Progress',
+            value: viewModel.inProgressCount.toString(),
+            icon: Icons.access_time,
+            color: Colors.blue,
+          ),
+          const SizedBox(width: 12),
+          _MetricCard(
+            label: 'Completed',
+            value: viewModel.completedCount.toString(),
+            icon: Icons.check_circle_outline,
+            color: Colors.green,
+          ),
+          const SizedBox(width: 12),
+          _MetricCard(
+            label: 'Overdue',
+            value: viewModel.overdueCount.toString(),
+            icon: Icons.error_outline,
+            color: Colors.red,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchAndFilters(TasksViewModel viewModel) {
+    return Column(
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: kcBorderColor),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          child: TextField(
+            onChanged: viewModel.setSearchQuery,
+            decoration: InputDecoration(
+              hintText: 'Search tasks...',
+              hintStyle: const TextStyle(color: kcTextMutedColor, fontSize: 14),
+              prefixIcon:
+                  const Icon(Icons.search_rounded, color: kcTextMutedColor),
+              border: InputBorder.none,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              const Text('Status:',
+                  style: TextStyle(fontSize: 12, color: kcTextMutedColor)),
+              const SizedBox(width: 8),
+              ...['All', 'Pending', 'In Progress', 'Completed', 'Overdue'].map(
+                (status) => Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: _FilterChip(
+                    label: status,
+                    isSelected: viewModel.filterStatus == status,
+                    onTap: () => viewModel.setFilterStatus(status),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MetricCard extends StatelessWidget {
+  const _MetricCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 140,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kcBorderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                  color: kcTextMutedColor,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              Icon(icon, size: 16, color: color),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w600,
+              color: kcTextColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? kcPrimaryColor : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? kcPrimaryColor : kcBorderColor,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? Colors.white : kcTextMutedColor,
+          ),
         ),
       ),
     );
@@ -227,11 +326,11 @@ class _TaskCard extends StatelessWidget {
   Color _statusColor(String status) {
     switch (status.toLowerCase()) {
       case 'completed':
-        return kcTealColor;
+        return Colors.green;
       case 'in progress':
-        return kcPrimaryColor;
-      case 'blocked':
-        return kcRoseColor;
+        return Colors.blue;
+      case 'overdue':
+        return Colors.red;
       default:
         return kcTextMutedColor;
     }
@@ -255,29 +354,32 @@ class _TaskCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: kcPrimaryColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    task.tag,
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: kcPrimaryColor,
+                if (task.tag.isNotEmpty)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: kcPrimaryColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ),
-                ),
+                    child: Text(
+                      task.tag,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: kcPrimaryColor,
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(),
                 Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _statusColor(task.status).withOpacity(0.08),
+                        color: _statusColor(task.status).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -289,9 +391,6 @@ class _TaskCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.chevron_right_rounded,
-                        color: kcTextMutedColor, size: 18),
                   ],
                 ),
               ],
@@ -316,6 +415,27 @@ class _TaskCard extends StatelessWidget {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
+            if (task.status == 'In Progress' && task.progress > 0) ...[
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Progress',
+                      style: TextStyle(fontSize: 10, color: kcTextMutedColor)),
+                  Text('${task.progress}%',
+                      style: const TextStyle(
+                          fontSize: 10, fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 4),
+              LinearProgressIndicator(
+                value: task.progress / 100,
+                backgroundColor: kcBackgroundColor,
+                color: kcPrimaryColor,
+                minHeight: 4,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ],
             const SizedBox(height: 14),
             Row(
               children: [
@@ -324,14 +444,19 @@ class _TaskCard extends StatelessWidget {
                 const SizedBox(width: 4),
                 Text(
                   task.due,
-                  style: const TextStyle(fontSize: 12, color: kcTextMutedColor),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: task.status == 'Overdue'
+                        ? Colors.red
+                        : kcTextMutedColor,
+                  ),
                 ),
                 const Spacer(),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _priorityColor(task.priority).withOpacity(0.08),
+                    color: _priorityColor(task.priority).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -344,17 +469,10 @@ class _TaskCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                CircleAvatar(
+                AppAvatar(
+                  imageUrl: task.assigneeAvatar,
                   radius: 14,
-                  backgroundColor: kcPrimaryColor.withOpacity(0.1),
-                  child: Text(
-                    task.assignee.substring(0, 1).toUpperCase(),
-                    style: const TextStyle(
-                      color: kcPrimaryColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
-                  ),
+                  fallbackInitials: 'U',
                 ),
               ],
             ),

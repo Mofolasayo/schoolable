@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-
-import 'package:flutter/cupertino.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
-import 'login_viewmodel.dart';
+import 'package:flutter/cupertino.dart';
+import 'signup_viewmodel.dart';
 
-class LoginView extends StackedView<LoginViewModel> {
-  const LoginView({Key? key}) : super(key: key);
+class SignupView extends StackedView<SignupViewModel> {
+  const SignupView({Key? key}) : super(key: key);
 
-  @override
   @override
   Widget builder(
-      BuildContext context, LoginViewModel viewModel, Widget? child) {
+      BuildContext context, SignupViewModel viewModel, Widget? child) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -22,7 +20,7 @@ class LoginView extends StackedView<LoginViewModel> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo Section
+                // Logo
                 Center(
                   child: Image.asset(
                     'assets/images/schoolable_logo.png',
@@ -31,8 +29,9 @@ class LoginView extends StackedView<LoginViewModel> {
                   ),
                 ),
                 const SizedBox(height: 40),
+                // Title
                 const Text(
-                  'Welcome Back',
+                  'Create Account',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 24,
@@ -43,7 +42,7 @@ class LoginView extends StackedView<LoginViewModel> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Sign in to your account to continue',
+                  'Sign up to get started with Schoolable',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
@@ -52,8 +51,35 @@ class LoginView extends StackedView<LoginViewModel> {
                   ),
                 ),
                 const SizedBox(height: 48),
-
-                // Form Fields
+                // Full Name Field
+                TextField(
+                  controller: viewModel.fullNameController,
+                  decoration: InputDecoration(
+                    hintText: 'Full Name',
+                    hintStyle:
+                        const TextStyle(color: kcTextMutedColor, fontSize: 14),
+                    prefixIcon: const Icon(Icons.person_outline,
+                        color: kcTextMutedColor, size: 20),
+                    filled: true,
+                    fillColor: kcBackgroundColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: kcBorderColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: kcBorderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: kcPrimaryColor),
+                    ),
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                  keyboardType: TextInputType.name,
+                ),
+                const SizedBox(height: 16),
+                // Email Field
                 TextField(
                   controller: viewModel.emailController,
                   decoration: InputDecoration(
@@ -81,6 +107,7 @@ class LoginView extends StackedView<LoginViewModel> {
                   keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 16),
+                // Password Field
                 TextField(
                   controller: viewModel.passwordController,
                   obscureText: viewModel.obscurePassword,
@@ -118,30 +145,49 @@ class LoginView extends StackedView<LoginViewModel> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: viewModel.goToForgotPassword,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(0, 0),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: kcPrimaryColor,
-                    ),
-                    child: const Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
+                // Confirm Password Field
+                TextField(
+                  controller: viewModel.confirmPasswordController,
+                  obscureText: viewModel.obscureConfirmPassword,
+                  decoration: InputDecoration(
+                    hintText: 'Confirm Password',
+                    hintStyle:
+                        const TextStyle(color: kcTextMutedColor, fontSize: 14),
+                    prefixIcon: const Icon(Icons.lock_outline_rounded,
+                        color: kcTextMutedColor, size: 20),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        viewModel.obscureConfirmPassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                        color: kcTextMutedColor,
+                        size: 20,
                       ),
+                      onPressed: viewModel.toggleConfirmPassword,
                     ),
+                    filled: true,
+                    fillColor: kcBackgroundColor,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: kcBorderColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: kcBorderColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: kcPrimaryColor),
+                    ),
+                    contentPadding: const EdgeInsets.all(16),
                   ),
                 ),
                 const SizedBox(height: 32),
+                // Sign Up Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: viewModel.isBusy ? null : viewModel.signIn,
+                    onPressed: viewModel.isBusy ? null : viewModel.signUp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kcPrimaryColor,
                       foregroundColor: Colors.white,
@@ -160,7 +206,7 @@ class LoginView extends StackedView<LoginViewModel> {
                             ),
                           )
                         : const Text(
-                            'Sign In',
+                            'Sign Up',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -168,13 +214,13 @@ class LoginView extends StackedView<LoginViewModel> {
                           ),
                   ),
                 ),
-
-                const SizedBox(height: 48),
+                const SizedBox(height: 24),
+                // Already have account
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Don\'t have an account?',
+                      'Already have an account?',
                       style: TextStyle(
                         color: kcTextMutedColor,
                         fontSize: 14,
@@ -182,9 +228,12 @@ class LoginView extends StackedView<LoginViewModel> {
                       ),
                     ),
                     TextButton(
-                      onPressed: viewModel.goToSignup,
+                      onPressed: viewModel.goBack,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
                       child: const Text(
-                        'Sign Up',
+                        'Sign In',
                         style: TextStyle(
                           color: kcPrimaryColor,
                           fontWeight: FontWeight.bold,
@@ -204,5 +253,5 @@ class LoginView extends StackedView<LoginViewModel> {
   }
 
   @override
-  LoginViewModel viewModelBuilder(BuildContext context) => LoginViewModel();
+  SignupViewModel viewModelBuilder(BuildContext context) => SignupViewModel();
 }

@@ -147,29 +147,3 @@ class OnboardingView extends StackedView<OnboardingViewModel> {
   OnboardingViewModel viewModelBuilder(BuildContext context) =>
       OnboardingViewModel();
 }
-
-class _TagChip extends StatelessWidget {
-  const _TagChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: kcPrimaryColor.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: kcPrimaryColor.withOpacity(0.2)),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: kcPrimaryColor,
-          fontWeight: FontWeight.w700,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
-}

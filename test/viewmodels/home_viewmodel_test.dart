@@ -1,8 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
-import 'package:schoolable/app/app.bottomsheets.dart';
 import 'package:schoolable/app/app.locator.dart';
-import 'package:schoolable/ui/common/app_strings.dart';
 import 'package:schoolable/ui/views/home/home_viewmodel.dart';
 
 import '../helpers/test_helpers.dart';
@@ -10,35 +7,15 @@ import '../helpers/test_helpers.dart';
 void main() {
   HomeViewModel getModel() => HomeViewModel();
 
-  group('HomeViewmodelTest -', () {
+  group('HomeViewModel Tests -', () {
     setUp(() => registerServices());
     tearDown(() => locator.reset());
 
-    group('incrementCounter -', () {
-      test('When called once should return  Counter is: 1', () {
+    group('Construction -', () {
+      test('When constructing, should initialize with empty announcements', () {
         final model = getModel();
-        model.incrementCounter();
-        expect(model.counterLabel, 'Counter is: 1');
+        expect(model.announcements, isEmpty);
       });
-    });
-
-    group('showBottomSheet -', () {
-      test(
-        'When called, should show custom bottom sheet using notice variant',
-        () {
-          final bottomSheetService = getAndRegisterBottomSheetService();
-
-          final model = getModel();
-          model.showBottomSheet();
-          verify(
-            bottomSheetService.showCustomSheet(
-              variant: BottomSheetType.notice,
-              title: ksHomeBottomSheetTitle,
-              description: ksHomeBottomSheetDescription,
-            ),
-          );
-        },
-      );
     });
   });
 }

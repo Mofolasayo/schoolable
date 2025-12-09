@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-
+import 'package:flutter_svg/svg.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
-import 'login_viewmodel.dart';
+import 'forgot_password_viewmodel.dart';
 
-class LoginView extends StackedView<LoginViewModel> {
-  const LoginView({Key? key}) : super(key: key);
+class ForgotPasswordView extends StackedView<ForgotPasswordViewModel> {
+  const ForgotPasswordView({Key? key}) : super(key: key);
 
-  @override
   @override
   Widget builder(
-      BuildContext context, LoginViewModel viewModel, Widget? child) {
+      BuildContext context, ForgotPasswordViewModel viewModel, Widget? child) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -22,7 +21,7 @@ class LoginView extends StackedView<LoginViewModel> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo Section
+                // Logo
                 Center(
                   child: Image.asset(
                     'assets/images/schoolable_logo.png',
@@ -31,8 +30,9 @@ class LoginView extends StackedView<LoginViewModel> {
                   ),
                 ),
                 const SizedBox(height: 40),
+                // Title
                 const Text(
-                  'Welcome Back',
+                  'Forgot Password?',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 24,
@@ -41,19 +41,19 @@ class LoginView extends StackedView<LoginViewModel> {
                     letterSpacing: -0.5,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 12),
                 const Text(
-                  'Sign in to your account to continue',
+                  'Don\'t worry! Enter your email and we\'ll send you a link to reset your password.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,
                     color: kcTextMutedColor,
+                    height: 1.5,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 48),
-
-                // Form Fields
+                // Email Field
                 TextField(
                   controller: viewModel.emailController,
                   decoration: InputDecoration(
@@ -80,68 +80,13 @@ class LoginView extends StackedView<LoginViewModel> {
                   ),
                   keyboardType: TextInputType.emailAddress,
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: viewModel.passwordController,
-                  obscureText: viewModel.obscurePassword,
-                  decoration: InputDecoration(
-                    hintText: 'Password',
-                    hintStyle:
-                        const TextStyle(color: kcTextMutedColor, fontSize: 14),
-                    prefixIcon: const Icon(Icons.lock_outline_rounded,
-                        color: kcTextMutedColor, size: 20),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        viewModel.obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: kcTextMutedColor,
-                        size: 20,
-                      ),
-                      onPressed: viewModel.togglePassword,
-                    ),
-                    filled: true,
-                    fillColor: kcBackgroundColor,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: kcBorderColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: kcBorderColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: kcPrimaryColor),
-                    ),
-                    contentPadding: const EdgeInsets.all(16),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: viewModel.goToForgotPassword,
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(0, 0),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: kcPrimaryColor,
-                    ),
-                    child: const Text(
-                      'Forgot Password?',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 13,
-                      ),
-                    ),
-                  ),
-                ),
                 const SizedBox(height: 32),
+                // Send Reset Link Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: viewModel.isBusy ? null : viewModel.signIn,
+                    onPressed:
+                        viewModel.isBusy ? null : viewModel.sendResetLink,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: kcPrimaryColor,
                       foregroundColor: Colors.white,
@@ -160,7 +105,7 @@ class LoginView extends StackedView<LoginViewModel> {
                             ),
                           )
                         : const Text(
-                            'Sign In',
+                            'Send Reset Link',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -168,13 +113,43 @@ class LoginView extends StackedView<LoginViewModel> {
                           ),
                   ),
                 ),
-
-                const SizedBox(height: 48),
+                const SizedBox(height: 24),
+                // Info box
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: kcPrimaryColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: kcPrimaryColor.withOpacity(0.1)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.info_outline,
+                        size: 20,
+                        color: kcPrimaryColor,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Check your spam folder if you don\'t receive the email',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: kcPrimaryColor.withOpacity(0.8),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Back to login
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Don\'t have an account?',
+                      'Remember your password?',
                       style: TextStyle(
                         color: kcTextMutedColor,
                         fontSize: 14,
@@ -182,9 +157,12 @@ class LoginView extends StackedView<LoginViewModel> {
                       ),
                     ),
                     TextButton(
-                      onPressed: viewModel.goToSignup,
+                      onPressed: viewModel.goBack,
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                      ),
                       child: const Text(
-                        'Sign Up',
+                        'Sign In',
                         style: TextStyle(
                           color: kcPrimaryColor,
                           fontWeight: FontWeight.bold,
@@ -204,5 +182,6 @@ class LoginView extends StackedView<LoginViewModel> {
   }
 
   @override
-  LoginViewModel viewModelBuilder(BuildContext context) => LoginViewModel();
+  ForgotPasswordViewModel viewModelBuilder(BuildContext context) =>
+      ForgotPasswordViewModel();
 }

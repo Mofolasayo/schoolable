@@ -12,41 +12,66 @@ class AttendanceView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Check In',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    color: kcTextColor,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Check In',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
+                        color: kcTextColor,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Track your daily attendance.',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: kcTextMutedColor.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
                 ),
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: kcBorderColor),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.03),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
-                  child: const Icon(Icons.history, color: kcTextColor, size: 20),
+                  child:
+                      const Icon(Icons.history, color: kcTextColor, size: 22),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+
+            // Check-in Card
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: kcBorderColor),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 6),
+                    color: Colors.black.withOpacity(0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -70,18 +95,18 @@ class AttendanceView extends StatelessWidget {
                       height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
                   Container(
-                    height: 220,
+                    height: 180,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: kcBorderColor),
                       color: kcPrimaryColor.withOpacity(0.03),
                     ),
-                    child: Center(
+                    child: const Center(
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           Icon(Icons.camera_alt_outlined,
                               color: kcTextMutedColor, size: 32),
                           SizedBox(height: 8),
@@ -97,39 +122,40 @@ class AttendanceView extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {},
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 0,
-                          ),
-                          child: const Text(
-                            'Start Camera',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              fontSize: 16,
-                            ),
-                          ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {},
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kcPrimaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: const Text(
+                        'Start Camera',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Colors.white,
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
+
+            // Recent Activity
             const Text(
               'Recent Activity',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
                 color: kcTextColor,
               ),
             ),
@@ -138,80 +164,22 @@ class AttendanceView extends StatelessWidget {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: 3,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: 12),
+              separatorBuilder: (context, index) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: kcBorderColor),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: kcTealColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(Icons.login,
-                            color: kcTealColor, size: 20),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            'Check In',
-                            style: TextStyle(
-                              fontWeight: FontWeight.w700,
-                              color: kcTextColor,
-                              fontSize: 14,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            '09:00 AM • Today',
-                            style: TextStyle(
-                              color: kcTextMutedColor,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: kcTealColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'On Time',
-                          style: TextStyle(
-                            color: kcTealColor,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return _buildActivityItem(index);
               },
             ),
             const SizedBox(height: 12),
-            TextButton.icon(
-              onPressed: () {},
-              icon: const Icon(Icons.visibility, color: kcPrimaryColor),
-              label: const Text(
-                'View full attendance history',
-                style: TextStyle(
-                  color: kcPrimaryColor,
-                  fontWeight: FontWeight.w700,
+            Center(
+              child: TextButton(
+                onPressed: () {},
+                child: const Text(
+                  'View full history',
+                  style: TextStyle(
+                    color: kcPrimaryColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),
@@ -220,21 +188,111 @@ class AttendanceView extends StatelessWidget {
       ),
     );
   }
-}
 
-class _InfoPill extends StatelessWidget {
-  const _InfoPill({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
+  Widget _buildActivityItem(int index) {
+    final status = index == 0
+        ? 'Present'
+        : index == 1
+            ? 'Late'
+            : 'Present';
+    final statusColor = index == 0
+        ? Colors.green
+        : index == 1
+            ? Colors.orange
+            : Colors.green;
+    final time = index == 0
+        ? '08:57 AM'
+        : index == 1
+            ? '09:14 AM'
+            : '08:45 AM';
+    final date = index == 0
+        ? 'Today'
+        : index == 1
+            ? 'Yesterday'
+            : 'Mon, 29 Jan';
+    const location = 'HQ - Main Office Entrance';
 
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kcBorderColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.login, color: statusColor, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Check In',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: kcTextColor,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        status,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '$time • $date',
+                  style: const TextStyle(
+                    color: kcTextMutedColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.location_on,
+                        size: 12, color: kcTextMutedColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      location,
+                      style: const TextStyle(
+                        color: kcTextMutedColor,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
