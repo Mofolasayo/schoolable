@@ -149,11 +149,11 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                 ),
                 const SizedBox(height: 16),
 
-                // Role Text Field
+                // Job Title / Position Field
                 TextField(
                   controller: viewModel.roleController,
                   decoration: InputDecoration(
-                    hintText: 'Role (e.g., Senior Developer, Team Lead)',
+                    hintText: 'Job Title (e.g., Product Manager, Developer)',
                     hintStyle:
                         const TextStyle(color: kcTextMutedColor, fontSize: 14),
                     prefixIcon: const Icon(Icons.work_outline,
@@ -297,6 +297,67 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                 ),
                 const SizedBox(height: 16),
 
+                // Team Lead Switch
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: kcBackgroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: kcBorderColor),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Are you a team lead?',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: kcTextColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Switch(
+                        value: viewModel.isTeamLead,
+                        onChanged: viewModel.toggleTeamLead,
+                        activeColor: kcPrimaryColor,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Employee Level Dropdown
+                Container(
+                  decoration: BoxDecoration(
+                    color: kcBackgroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: kcBorderColor),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<int>(
+                      value: viewModel.selectedEmployeeLevel,
+                      hint: const Text(
+                        'Select Grade Level',
+                        style: TextStyle(color: kcTextMutedColor, fontSize: 14),
+                      ),
+                      isExpanded: true,
+                      icon: const Icon(Icons.stars, color: kcTextMutedColor),
+                      items: viewModel.employeeLevels.map((int level) {
+                        return DropdownMenuItem<int>(
+                          value: level,
+                          child: Text('Level $level',
+                              style: const TextStyle(fontSize: 14)),
+                        );
+                      }).toList(),
+                      onChanged: viewModel.setEmployeeLevel,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
                 // Address Field
                 TextField(
                   controller: viewModel.addressController,
@@ -386,7 +447,6 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                 ),
                 const SizedBox(height: 32),
 
-
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -448,6 +508,33 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                       ),
                     ],
                   ),
+                ),
+                const SizedBox(height: 24),
+
+                // Back to Login Link
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Wrong account?',
+                      style: TextStyle(
+                        color: kcTextMutedColor,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: viewModel.goToLogin,
+                      child: const Text(
+                        'Sign out',
+                        style: TextStyle(
+                          color: kcPrimaryColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 24),
               ],

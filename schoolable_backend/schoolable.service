@@ -1,0 +1,21 @@
+[Unit]
+Description=Schoolable Backend
+After=network.target
+
+[Service]
+# Adjust the user/group as needed on the target host
+User=www-data
+WorkingDirectory=/opt/schoolable_backend
+Environment=SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5433/schoolable
+Environment=SPRING_DATASOURCE_USERNAME=postgres
+Environment=SPRING_DATASOURCE_PASSWORD=folasayo
+Environment=JWT_SECRET=rKfW9uD4Kf0vS2E7xM1qP4sZ8tC6bL3uY1nH5eV9gR2kX7jD5cT9mQ1wZ8rV6p
+Environment=RESEND_API_KEY=re_jLjLPYyu_7HuiSvaFMFA44Njm7E4Rq6CG
+Environment=RESEND_FROM=hello@getdebby.co
+ExecStart=/usr/bin/java -jar /opt/schoolable_backend/schoolable_backend-0.0.1-SNAPSHOT.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

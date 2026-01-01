@@ -279,7 +279,7 @@ class ChatView extends StackedView<ChatViewModel> {
                             final channelId =
                                 await viewModel.startDirectMessage(user['id']);
 
-                            if (parentContext.mounted) {
+                            if (parentContext.mounted && channelId != null) {
                               Navigator.of(parentContext).push(
                                 MaterialPageRoute(
                                   builder: (context) => MessageDetailView(
@@ -287,6 +287,7 @@ class ChatView extends StackedView<ChatViewModel> {
                                     name: fullName,
                                     avatar: displayAvatarUrl,
                                     isChannel: false,
+                                    otherUserId: user['id'],
                                   ),
                                 ),
                               );
@@ -483,6 +484,7 @@ class _DirectMessageItem extends StatelessWidget {
               name: user.name,
               avatar: user.avatar,
               isChannel: false,
+              otherUserId: user.otherUserId,
             ),
           ),
         );

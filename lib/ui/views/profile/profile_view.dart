@@ -81,15 +81,18 @@ class ProfileView extends StackedView<ProfileViewModel> {
                       Positioned(
                         bottom: 0,
                         right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: kcPrimaryColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 3),
+                        child: GestureDetector(
+                          onTap: viewModel.pickAndUploadAvatar,
+                          child: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: kcPrimaryColor,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 3),
+                            ),
+                            child: const Icon(Icons.camera_alt,
+                                color: Colors.white, size: 14),
                           ),
-                          child: const Icon(Icons.camera_alt,
-                              color: Colors.white, size: 14),
                         ),
                       ),
                     ],
@@ -156,7 +159,7 @@ class ProfileView extends StackedView<ProfileViewModel> {
                   _ProfileMenuItem(
                     icon: Icons.person_outline_rounded,
                     title: 'Personal Information',
-                    onTap: () {},
+                    onTap: () => _showPersonalInfoSheet(context, viewModel),
                   ),
                   const Divider(height: 1, color: kcBorderColor),
                   _ProfileMenuItem(
@@ -169,7 +172,7 @@ class ProfileView extends StackedView<ProfileViewModel> {
                   _ProfileMenuItem(
                     icon: Icons.lock_outline_rounded,
                     title: 'Security',
-                    onTap: () {},
+                    onTap: () => viewModel.navigateToSecurity(),
                   ),
                 ],
               ),
@@ -204,6 +207,59 @@ class ProfileView extends StackedView<ProfileViewModel> {
                       style: TextStyle(color: kcTextMutedColor, fontSize: 13),
                     ),
                     onTap: () {},
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            _buildSectionHeader('Growth & Learning'),
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kcBorderColor),
+              ),
+              child: Column(
+                children: [
+                  _ProfileMenuItem(
+                    icon: Icons.school_rounded,
+                    title: 'Training Certificates',
+                    trailing: viewModel.hasCurrentQuarterCertificate
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF10B981).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Done',
+                              style: TextStyle(
+                                color: Color(0xFF10B981),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          )
+                        : Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF97316).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Required',
+                              style: TextStyle(
+                                color: Color(0xFFF97316),
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                    onTap: () => viewModel.navigateToGrowth(),
                   ),
                 ],
               ),
@@ -299,7 +355,6 @@ class _ProfileMenuItem extends StatelessWidget {
     this.trailing,
   });
 
-  @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
@@ -330,6 +385,151 @@ class _ProfileMenuItem extends StatelessWidget {
       ),
     );
   }
+}
+
+void _showPersonalInfoSheet(BuildContext context, ProfileViewModel viewModel) {
+  // Prefill using the specific fields we added to ViewModel which are kept in sync
+  final fullNameController = TextEditingController(text: viewModel.name);
+  final jobTitleController = TextEditingController(text: viewModel.role);
+  final phoneController = TextEditingController(text: viewModel.phone ?? '');
+  final addressController =
+      TextEditingController(text: viewModel.address ?? '');
+  final cityController = TextEditingController(text: viewModel.city ?? '');
+  final stateController = TextEditingController(text: viewModel.state ?? '');
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) => Container(
+      height: MediaQuery.of(context).size.height * 0.85,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(
+          24, 24, 24, MediaQuery.of(context).viewInsets.bottom + 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Personal Information',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: kcTextColor,
+                ),
+              ),
+              IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(Icons.close, color: kcTextMutedColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: [
+                  _buildTextField(
+                      'Full Name', fullNameController, TextInputType.name),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                      'Job Title', jobTitleController, TextInputType.text),
+                  const SizedBox(height: 16),
+                  _buildTextField(
+                      'Phone Number', phoneController, TextInputType.phone),
+                  const SizedBox(height: 16),
+                  _buildTextField('Address', addressController,
+                      TextInputType.streetAddress),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                          child: _buildTextField(
+                              'City', cityController, TextInputType.text)),
+                      const SizedBox(width: 16),
+                      Expanded(
+                          child: _buildTextField(
+                              'State', stateController, TextInputType.text)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                viewModel.updateProfile(
+                  fullName: fullNameController.text,
+                  jobTitle: jobTitleController.text,
+                  phone: phoneController.text,
+                  address: addressController.text,
+                  city: cityController.text,
+                  state: stateController.text,
+                );
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kcPrimaryColor,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Save Changes',
+                  style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white)),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildTextField(
+    String label, TextEditingController controller, TextInputType type) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label,
+          style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: kcTextMutedColor)),
+      const SizedBox(height: 8),
+      TextField(
+        controller: controller,
+        keyboardType: type,
+        decoration: InputDecoration(
+          filled: true,
+          fillColor: kcBackgroundColor,
+          border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kcBorderColor)),
+          enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kcBorderColor)),
+          focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: kcPrimaryColor)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+      ),
+    ],
+  );
 }
 
 class _ChipText extends StatelessWidget {

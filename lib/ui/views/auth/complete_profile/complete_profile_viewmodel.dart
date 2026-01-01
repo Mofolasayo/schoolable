@@ -3,7 +3,7 @@ import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/app/app.router.dart';
 import 'package:stacked_services/stacked_services.dart';
-import 'package:schoolable/services/supabase_service.dart';
+import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 
 class CompleteProfileViewModel extends BaseViewModel {
@@ -13,11 +13,27 @@ class CompleteProfileViewModel extends BaseViewModel {
   CompleteProfileViewModel({
     required this.email,
     required this.fullName,
-  });
+  }) {
+    // Debug: Check auth state when view is created
+    _debugCheckAuth();
+  }
 
   final _nav = locator<NavigationService>();
-  final _supabaseService = locator<SupabaseService>();
+  final _backend = locator<BackendApiService>();
   final _dialogService = locator<DialogService>();
+
+  Future<void> _debugCheckAuth() async {
+    print('🔍 CompleteProfileViewModel initialized');
+    print('📧 Email: $email');
+    print('👤 Full Name: $fullName');
+    await _backend.debugAuthState();
+  }
+
+  Future<void> goToLogin() async {
+    // Clear the session and go back to login
+    await _backend.signOut();
+    _nav.clearStackAndShow(Routes.loginView);
+  }
 
   final employeeIdController = TextEditingController();
   final phoneController = TextEditingController();
@@ -26,7 +42,7 @@ class CompleteProfileViewModel extends BaseViewModel {
   final cityController = TextEditingController();
   final stateController = TextEditingController();
 
-  // Department options based on PRD
+  // Department options based on UPDATED requirements
   final List<String> departments = [
     'Operations',
     'Customer Support',
@@ -34,18 +50,26 @@ class CompleteProfileViewModel extends BaseViewModel {
     'Sales',
     'HR',
     'Finance',
+    'Executive office',
+    'Pos operations',
+    'Growth',
+    'Admin',
   ];
 
-  // Gender options
+  // Gender options - restricted
   final List<String> genders = [
     'Male',
     'Female',
-    'Other',
-    'Prefer not to say',
   ];
+
+  // Employee Levels
+  final List<int> employeeLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
   String? selectedDepartment;
   String? selectedGender;
+  int? selectedEmployeeLevel;
+  bool isTeamLead = false;
+
   DateTime? dateJoined;
   DateTime? dateOfBirth;
 
@@ -56,6 +80,16 @@ class CompleteProfileViewModel extends BaseViewModel {
 
   void setGender(String? value) {
     selectedGender = value;
+    rebuildUi();
+  }
+
+  void setEmployeeLevel(int? value) {
+    selectedEmployeeLevel = value;
+    rebuildUi();
+  }
+
+  void toggleTeamLead(bool value) {
+    isTeamLead = value;
     rebuildUi();
   }
 
@@ -170,7 +204,7 @@ class CompleteProfileViewModel extends BaseViewModel {
       await _dialogService.showDialog(
         title: 'Required Field',
         description:
-            'Please enter your role (e.g., Senior Developer, Team Lead)',
+            'Please enter your job title (e.g., Product Manager, Developer)',
       );
       return;
     }
@@ -183,10 +217,18 @@ class CompleteProfileViewModel extends BaseViewModel {
       return;
     }
 
+    if (selectedEmployeeLevel == null) {
+      await _dialogService.showDialog(
+        title: 'Required Field',
+        description: 'Please select your employee grade level',
+      );
+      return;
+    }
+
     setBusy(true);
     try {
       // 1. Update Profile (User is already logged in from LoginView)
-      await _supabaseService.updateProfile(
+      await _backend.completeProfile(
         employeeId: employeeIdController.text.trim(),
         phone: phoneController.text.trim(),
         department: selectedDepartment!,
@@ -203,6 +245,8 @@ class CompleteProfileViewModel extends BaseViewModel {
         state: stateController.text.trim().isEmpty
             ? null
             : stateController.text.trim(),
+        isTeamLead: isTeamLead,
+        employeeLevel: selectedEmployeeLevel,
       );
 
       setBusy(false);

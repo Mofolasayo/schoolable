@@ -6,19 +6,12 @@ import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/app/app.router.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:stacked_services/stacked_services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load env variables
   await dotenv.load(fileName: "assets/.env");
-
-  // Initialize Supabase
-  await Supabase.initialize(
-    url: dotenv.env['SUPABASE_URL']!,
-    anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
-  );
 
   await setupLocator();
   setupDialogUi();

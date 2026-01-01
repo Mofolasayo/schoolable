@@ -3,23 +3,24 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import 'package:stacked/stacked.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:schoolable/app/app.locator.dart';
-import 'package:schoolable/services/supabase_service.dart';
+import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
-import 'package:schoolable/ui/common/widgets/app_avatar.dart'; // Added import
+import 'package:schoolable/ui/common/widgets/app_avatar.dart';
 
 class MessageDetailViewModel extends BaseViewModel {
-  final SupabaseService _supabaseService = locator<SupabaseService>();
+  final BackendApiService _backendService = locator<BackendApiService>();
 
   final String channelId;
   final String name;
   final bool isChannel;
+  final String? otherUserId; // For DMs - to track online status
 
   MessageDetailViewModel({
     required this.channelId,
     required this.name,
     this.isChannel = false,
+    this.otherUserId,
   });
 
   List<Map<String, dynamic>> _messages = [];
@@ -28,57 +29,68 @@ class MessageDetailViewModel extends BaseViewModel {
   List<Map<String, dynamic>> _members = [];
   List<Map<String, dynamic>> get members => _members;
 
-  RealtimeChannel? _subscription;
+  bool _isOtherUserOnline = false;
+  bool get isOtherUserOnline => _isOtherUserOnline;
+
   Timer? _timer;
+  Timer? _onlineTimer;
 
   final TextEditingController messageController = TextEditingController();
   bool get canSendMessage => messageController.text.trim().isNotEmpty;
 
   void initialize() {
     setBusy(true);
+
+    // Mark as read immediately when opening
+    _markAsRead();
+
     fetchMessages();
-    subscribeToMessages();
 
     if (isChannel) {
       fetchMembers();
+    } else if (otherUserId != null) {
+      // For DMs, check if other user is online
+      _checkOnlineStatus();
+      _onlineTimer = Timer.periodic(
+        const Duration(seconds: 30),
+        (_) => _checkOnlineStatus(),
+      );
     }
 
-    // Polling fallback
-    _timer = Timer.periodic(const Duration(minutes: 1), (_) => fetchMessages());
+    // Polling every 3 seconds for new messages (faster for chat)
+    _timer = Timer.periodic(const Duration(seconds: 3), (_) => fetchMessages());
 
     messageController.addListener(notifyListeners);
   }
 
+  Future<void> _markAsRead() async {
+    await _backendService.markChannelAsRead(channelId);
+  }
+
+  Future<void> _checkOnlineStatus() async {
+    if (otherUserId == null) return;
+    final onlineIds = await _backendService.getOnlineUserIds();
+    _isOtherUserOnline = onlineIds.contains(otherUserId);
+    notifyListeners();
+  }
+
   Future<void> fetchMembers() async {
-    _members = await _supabaseService.getChannelMembers(channelId);
+    _members = await _backendService.getChannelMembers(channelId);
     notifyListeners();
   }
 
   Future<void> fetchMessages() async {
-    final msgs = await _supabaseService.getMessages(channelId);
+    final previousCount = _messages.length;
+    final msgs = await _backendService.getMessages(channelId);
     _messages = msgs;
     setBusy(false);
-    notifyListeners();
-  }
 
-  void subscribeToMessages() {
-    final channelName = 'public:messages:$channelId';
-    _subscription = _supabaseService.client.channel(channelName);
-    _subscription!
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'messages',
-          filter: PostgresChangeFilter(
-            type: PostgresChangeFilterType.eq,
-            column: 'channel_id',
-            value: channelId,
-          ),
-          callback: (payload) {
-            fetchMessages(); // Refresh on new message
-          },
-        )
-        .subscribe();
+    // If we have new messages, mark as read
+    if (msgs.length > previousCount) {
+      _markAsRead();
+    }
+
+    notifyListeners();
   }
 
   Future<void> sendMessage() async {
@@ -86,26 +98,28 @@ class MessageDetailViewModel extends BaseViewModel {
     if (text.isEmpty) return;
 
     messageController.clear();
-    await _supabaseService.sendMessage(channelId, text);
+    await _backendService.sendMessage(channelId, text);
+    // Refresh messages after sending
+    await fetchMessages();
   }
 
   bool isMe(String userId) {
-    return _supabaseService.currentUser?.id == userId;
+    return _backendService.currentUserId == userId;
   }
 
-  String get currentUserId => _supabaseService.currentUser?.id ?? '';
+  String get currentUserId => _backendService.currentUserId ?? '';
 
   @override
   void dispose() {
-    _subscription?.unsubscribe();
     _timer?.cancel();
+    _onlineTimer?.cancel();
     messageController.removeListener(notifyListeners);
     messageController.dispose();
     super.dispose();
   }
 
   String getAvatarUrl(String? gender, String seed) {
-    return _supabaseService.getAvatarUrl(gender, seed);
+    return _backendService.getAvatarUrl(gender, seed);
   }
 }
 
@@ -114,6 +128,7 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
   final String name;
   final String? avatar;
   final bool isChannel;
+  final String? otherUserId; // For DMs - to track online status
 
   const MessageDetailView({
     Key? key,
@@ -121,6 +136,7 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
     required this.name,
     this.avatar,
     this.isChannel = false,
+    this.otherUserId,
   }) : super(key: key);
 
   @override
@@ -144,17 +160,36 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
           child: Row(
             children: [
               if (!isChannel)
-                Container(
-                  padding: const EdgeInsets.all(1.5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: kcPrimaryColor, width: 1.5),
-                  ),
-                  child: AppAvatar(
-                    imageUrl: avatar,
-                    radius: 16,
-                    fallbackInitials: name,
-                  ),
+                Stack(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(1.5),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: kcPrimaryColor, width: 1.5),
+                      ),
+                      child: AppAvatar(
+                        imageUrl: avatar,
+                        radius: 16,
+                        fallbackInitials: name,
+                      ),
+                    ),
+                    // Online status indicator
+                    if (viewModel.isOtherUserOnline)
+                      Positioned(
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          width: 12,
+                          height: 12,
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               if (!isChannel) const SizedBox(width: 12),
               Column(
@@ -168,6 +203,18 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
+                  // Show online/offline status for DMs
+                  if (!isChannel)
+                    Text(
+                      viewModel.isOtherUserOnline ? 'Online' : 'Offline',
+                      style: TextStyle(
+                        color: viewModel.isOtherUserOnline
+                            ? Colors.green
+                            : kcTextMutedColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
                 ],
               ),
             ],
@@ -193,7 +240,7 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
                         itemCount: viewModel.messages.length,
                         itemBuilder: (context, index) {
                           final message = viewModel.messages[index];
-                          final isMe = viewModel.isMe(message['user_id']);
+                          final isMe = viewModel.isMe(message['user_id'] ?? '');
                           final content = message['content'] ?? '';
                           final timestamp = message['created_at'];
 
@@ -274,7 +321,6 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
   }
 
   Widget _buildMessageInput(MessageDetailViewModel viewModel) {
-    // Controller is now in viewModel
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: const BoxDecoration(
@@ -328,7 +374,7 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
 
   void _showChannelDetails(
       BuildContext context, MessageDetailViewModel viewModel) {
-    if (!isChannel) return; // TODO: Implement for DMs if needed
+    if (!isChannel) return;
 
     showModalBottomSheet(
       context: context,
@@ -379,7 +425,7 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
                     )
                   else
                     ...viewModel.members.map((member) {
-                      final profile = member['profiles'] ?? {};
+                      final profile = member['profiles'] ?? member;
                       final fullName = profile['full_name'] ?? 'Unknown';
                       final seed = profile['employee_id'] ??
                           profile['email'] ??
@@ -407,15 +453,7 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
                               ),
                               child: AppAvatar(
                                 imageUrl: avatarUrl,
-                                radius:
-                                    18, // 36/2 = 18? Original 40 -> 20. But border takes space.
-                                // Wrapper container was 40x40.
-                                // Child ClipOval was full size?
-                                // Actually original code had Container width 40, height 40.
-                                // AppAvatar(radius: 20) -> width 40.
-                                // If I wrap in container with padding 1.5, I need slightly smaller avatar?
-                                // radius 18.5? 20 - 1.5 = 18.5.
-
+                                radius: 18,
                                 fallbackInitials: fullName,
                               ),
                             ),
@@ -461,7 +499,11 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
   @override
   MessageDetailViewModel viewModelBuilder(BuildContext context) =>
       MessageDetailViewModel(
-          channelId: channelId, name: name, isChannel: isChannel);
+        channelId: channelId,
+        name: name,
+        isChannel: isChannel,
+        otherUserId: otherUserId,
+      );
 
   @override
   void onViewModelReady(MessageDetailViewModel viewModel) =>

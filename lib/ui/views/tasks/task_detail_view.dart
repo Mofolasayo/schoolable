@@ -294,6 +294,41 @@ class TaskDetailView extends StackedView<TaskDetailViewModel> {
                                   ),
                                 ),
                               )),
+
+                          // Add New Subtask Field
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey[200]!),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.add_rounded,
+                                    color: kcTextMutedColor),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: TextField(
+                                    decoration: const InputDecoration(
+                                      hintText: 'Add checklist item...',
+                                      hintStyle: TextStyle(
+                                          color: kcTextMutedColor,
+                                          fontSize: 14),
+                                      border: InputBorder.none,
+                                    ),
+                                    onSubmitted: (value) {
+                                      if (value.isNotEmpty) {
+                                        viewModel.addSubtask(value);
+                                      }
+                                    },
+                                    textInputAction: TextInputAction.done,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           const SizedBox(height: 32),
                         ],
 

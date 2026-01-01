@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
+import 'package:schoolable/app/app.router.dart';
 import 'package:stacked_services/stacked_services.dart';
-import 'package:schoolable/services/supabase_service.dart';
+import 'package:schoolable/services/backend_api_service.dart';
 
 class ForgotPasswordViewModel extends BaseViewModel {
   final _nav = locator<NavigationService>();
-  final _supabaseService = locator<SupabaseService>();
+  final _backendService = locator<BackendApiService>();
   final _dialogService = locator<DialogService>();
 
   final emailController = TextEditingController();
@@ -16,7 +17,6 @@ class ForgotPasswordViewModel extends BaseViewModel {
   }
 
   Future<void> sendResetLink() async {
-    // Validation
     if (emailController.text.trim().isEmpty) {
       await _dialogService.showDialog(
         title: 'Error',
@@ -35,21 +35,25 @@ class ForgotPasswordViewModel extends BaseViewModel {
 
     setBusy(true);
     try {
-      await _supabaseService.resetPasswordForEmail(
+      final success = await _backendService.resetPasswordForEmail(
         email: emailController.text.trim(),
       );
 
-      // Show success dialog
-      await _dialogService.showDialog(
-        title: 'Reset Link Sent',
-        description:
-            'We\'ve sent a password reset link to ${emailController.text.trim()}.\n\n'
-            'Please check your email (including spam folder) and click the link to reset your password.',
-        buttonTitle: 'Got it',
-      );
-
-      // Navigate back to login
-      _nav.back();
+      if (success) {
+        // Navigate to OTP verification screen with password reset mode
+        _nav.navigateTo(
+          Routes.verifyOtpView,
+          arguments: VerifyOtpViewArguments(
+            email: emailController.text.trim(),
+            isPasswordReset: true,
+          ),
+        );
+      } else {
+        await _dialogService.showDialog(
+          title: 'Error',
+          description: 'Failed to send reset link. Please try again.',
+        );
+      }
     } catch (e) {
       await _dialogService.showDialog(
         title: 'Error',

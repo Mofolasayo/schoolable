@@ -3,11 +3,11 @@ import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/app/app.router.dart';
 import 'package:stacked_services/stacked_services.dart';
-import 'package:schoolable/services/supabase_service.dart';
+import 'package:schoolable/services/backend_api_service.dart';
 
 class SignupViewModel extends BaseViewModel {
   final _nav = locator<NavigationService>();
-  final _supabaseService = locator<SupabaseService>();
+  final _backend = locator<BackendApiService>();
   final _dialogService = locator<DialogService>();
 
   final fullNameController = TextEditingController();
@@ -84,9 +84,7 @@ class SignupViewModel extends BaseViewModel {
 
     setBusy(true);
     try {
-      // 1. Create the account (Simple Signup)
-      // The database trigger will create the basic profile row
-      await _supabaseService.signUp(
+      final res = await _backend.signUp(
         email: emailController.text.trim(),
         password: passwordController.text,
         fullName: fullNameController.text.trim(),
@@ -98,13 +96,13 @@ class SignupViewModel extends BaseViewModel {
       await _dialogService.showDialog(
         title: 'Verify Your Email',
         description: 'Account created successfully!\n\n'
-            'We have sent a verification link to ${emailController.text.trim()}.\n\n'
-            'Please verify your email, then login to complete your profile.',
-        buttonTitle: 'Go to Login',
+            'We just sent a 6-digit code to ${emailController.text.trim()}.\n\n'
+            'Enter the code to verify your email.',
+        buttonTitle: 'Continue',
       );
 
-      // 3. Navigate to Login
-      _nav.back(); // Back to Login (since we came from there)
+      // 3. Navigate to OTP verification
+      _nav.replaceWithVerifyOtpView(email: emailController.text.trim());
     } catch (e) {
       setBusy(false);
       await _dialogService.showDialog(

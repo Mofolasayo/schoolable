@@ -1,12 +1,11 @@
 import 'package:stacked/stacked.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:schoolable/app/app.locator.dart';
-import 'package:schoolable/services/supabase_service.dart';
+import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/views/tasks/task_model.dart';
 import 'dart:async';
 
 class TasksViewModel extends BaseViewModel {
-  final _supabaseService = locator<SupabaseService>();
+  final _backendService = locator<BackendApiService>();
 
   List<Task> _allTasks = [];
 
@@ -39,39 +38,17 @@ class TasksViewModel extends BaseViewModel {
       _allTasks.where((t) => t.status == 'Completed').length;
   int get overdueCount => _allTasks.where((t) => t.status == 'Overdue').length;
 
-  RealtimeChannel? _subscription;
   Timer? _timer;
 
   void initialize() {
     fetchTasks();
-    _setupRealtimeSubscription();
-    // Safety polling every 2 minutes
+    // Polling every 30 seconds since we don't have real-time
     _timer =
-        Timer.periodic(const Duration(minutes: 2), (timer) => fetchTasks());
-  }
-
-  void _setupRealtimeSubscription() {
-    final user = _supabaseService.currentUser;
-    if (user == null) return;
-
-    final channel = _supabaseService.client.channel('public:tasks:list');
-    channel
-        .onPostgresChanges(
-            event: PostgresChangeEvent.all,
-            schema: 'public',
-            table: 'tasks',
-            filter: PostgresChangeFilter(
-                type: PostgresChangeFilterType.eq,
-                column: 'assignee_id',
-                value: user.id),
-            callback: (payload) => fetchTasks())
-        .subscribe();
-    _subscription = channel;
+        Timer.periodic(const Duration(seconds: 30), (timer) => fetchTasks());
   }
 
   @override
   void dispose() {
-    _subscription?.unsubscribe();
     _timer?.cancel();
     super.dispose();
   }
@@ -79,10 +56,10 @@ class TasksViewModel extends BaseViewModel {
   Future<void> fetchTasks() async {
     setBusy(true);
     try {
-      final data = await _supabaseService.getTasks();
+      final data = await _backendService.getTasks();
       _allTasks = data.map((e) => Task.fromMap(e)).toList();
     } catch (e) {
-      // Handle error
+      print('Error fetching tasks: $e');
     } finally {
       setBusy(false);
     }
