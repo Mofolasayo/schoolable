@@ -13,6 +13,7 @@ import 'package:schoolable/ui/views/home/team_insights_view.dart';
 import 'package:schoolable/ui/common/widgets/app_avatar.dart';
 
 import 'package:schoolable/ui/views/compliance/compliance_submission_view.dart';
+import 'package:schoolable/ui/views/home/peer_helpfulness_view.dart';
 
 import 'home_viewmodel.dart';
 
@@ -270,6 +271,105 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                     ],
                   ),
                   const SizedBox(height: 24),
+
+                  // Peer Helpfulness Rating Prompt
+                  if (viewModel.hasPendingPeerRatings) ...[
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const PeerHelpfulnessView(),
+                        ),
+                      ).then((_) => viewModel.refresh()),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              kcPrimaryColor.withOpacity(0.1),
+                              Colors.purple.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: kcPrimaryColor.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: kcPrimaryColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Icon(
+                                    Icons.handshake,
+                                    color: kcPrimaryColor,
+                                    size: 24,
+                                  ),
+                                  if (viewModel.pendingPeerRatingsCount > 0)
+                                    Positioned(
+                                      top: -4,
+                                      right: -4,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.red,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          '${viewModel.pendingPeerRatingsCount}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Weekly Team Support',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: kcTextColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Rate how helpful your ${viewModel.pendingPeerRatingsCount} colleagues were this week',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: kcTextMutedColor.withOpacity(0.8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 16,
+                              color: kcPrimaryColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
 
                   // Action Required (Compliance)
                   if (viewModel.complianceItems.isNotEmpty) ...[
