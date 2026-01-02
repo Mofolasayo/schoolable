@@ -933,6 +933,52 @@ class BackendApiService {
     }
   }
 
+  // ==================== TASK QUALITY RATING ====================
+
+  /// Get tasks pending quality rating (tasks I created that are completed)
+  Future<Map<String, dynamic>> getTasksPendingRating() async {
+    try {
+      final result = await _get('/tasks/rating/pending');
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      print('Error fetching tasks pending rating: $e');
+      return {'pendingRatings': [], 'count': 0};
+    }
+  }
+
+  /// Rate a completed task
+  Future<Map<String, dynamic>?> rateTask({
+    required int taskId,
+    required int rating,
+    String? comment,
+  }) async {
+    try {
+      final result = await _post(
+        '/tasks/$taskId/rate',
+        {
+          'rating': rating,
+          if (comment != null) 'comment': comment,
+        },
+        auth: true,
+      );
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      print('Error rating task: $e');
+      return null;
+    }
+  }
+
+  /// Get average quality rating for an employee
+  Future<Map<String, dynamic>> getAverageRating(String employeeId) async {
+    try {
+      final result = await _get('/tasks/rating/average/$employeeId');
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      print('Error fetching average rating: $e');
+      return {'averageRating': null, 'hasRatings': false};
+    }
+  }
+
   // ==================== TASKS ====================
 
   /// Get tasks assigned to current user

@@ -14,6 +14,7 @@ import 'package:schoolable/ui/common/widgets/app_avatar.dart';
 
 import 'package:schoolable/ui/views/compliance/compliance_submission_view.dart';
 import 'package:schoolable/ui/views/home/peer_helpfulness_view.dart';
+import 'package:schoolable/ui/views/tasks/task_rating_modal.dart';
 
 import 'home_viewmodel.dart';
 
@@ -364,6 +365,113 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                               Icons.arrow_forward_ios_rounded,
                               size: 16,
                               color: kcPrimaryColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Task Quality Rating Prompt
+                  if (viewModel.hasPendingTaskRatings) ...[
+                    GestureDetector(
+                      onTap: () {
+                        // Show rating for first pending task
+                        if (viewModel.pendingTaskRatings.isNotEmpty) {
+                          final task = viewModel.pendingTaskRatings.first;
+                          showTaskRatingModal(
+                            context,
+                            taskId: task['id'] as int,
+                            taskTitle: task['title'] as String? ?? 'Task',
+                            assigneeName: task['assigneeName'] as String? ??
+                                'Team Member',
+                            onRated: () => viewModel.refresh(),
+                          );
+                        }
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.amber.withOpacity(0.1),
+                              Colors.orange.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.amber.withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Stack(
+                                children: [
+                                  const Icon(
+                                    Icons.star_rounded,
+                                    color: Colors.amber,
+                                    size: 24,
+                                  ),
+                                  if (viewModel.pendingTaskRatingsCount > 0)
+                                    Positioned(
+                                      top: -4,
+                                      right: -4,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Colors.orange,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          '${viewModel.pendingTaskRatingsCount}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Rate Completed Tasks',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                      color: kcTextColor,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Rate the quality of ${viewModel.pendingTaskRatingsCount} completed task${viewModel.pendingTaskRatingsCount > 1 ? 's' : ''}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: kcTextMutedColor.withOpacity(0.8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              size: 16,
+                              color: Colors.amber,
                             ),
                           ],
                         ),

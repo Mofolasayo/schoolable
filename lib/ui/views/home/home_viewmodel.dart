@@ -313,6 +313,11 @@ class HomeViewModel extends IndexTrackingViewModel {
   int pendingPeerRatingsCount = 0;
   String? peerRatingPromptMessage;
 
+  // Task Quality Rating Status
+  bool hasPendingTaskRatings = false;
+  int pendingTaskRatingsCount = 0;
+  List<Map<String, dynamic>> pendingTaskRatings = [];
+
   HomeViewModel() {
     _initialize();
   }
@@ -327,6 +332,7 @@ class HomeViewModel extends IndexTrackingViewModel {
     _fetchTeamData(); // Fetch Team Score & AI Insights
     _fetchComplianceItems(); // Fetch Compliance items
     _fetchPeerHelpfulnessStatus(); // Check if peer ratings needed
+    _fetchTaskRatingStatus(); // Check if task ratings needed
 
     _connectWebSocket();
 
@@ -526,6 +532,26 @@ class HomeViewModel extends IndexTrackingViewModel {
       print('Error fetching peer helpfulness status: $e');
       hasPendingPeerRatings = false;
       pendingPeerRatingsCount = 0;
+    }
+  }
+
+  /// Fetch task quality rating status
+  Future<void> _fetchTaskRatingStatus() async {
+    try {
+      final result = await _backendService.getTasksPendingRating();
+      final ratings = result['pendingRatings'] as List<dynamic>? ?? [];
+
+      pendingTaskRatings =
+          ratings.map((r) => Map<String, dynamic>.from(r)).toList();
+      pendingTaskRatingsCount = ratings.length;
+      hasPendingTaskRatings = pendingTaskRatingsCount > 0;
+
+      rebuildUi();
+    } catch (e) {
+      print('Error fetching task rating status: $e');
+      hasPendingTaskRatings = false;
+      pendingTaskRatingsCount = 0;
+      pendingTaskRatings = [];
     }
   }
 
