@@ -3,11 +3,20 @@ import 'package:flutter/material.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/home/home_viewmodel.dart';
 
-/// Detailed Aura Score breakdown page
-class AuraDetailView extends StatelessWidget {
+/// Detailed Aura Score breakdown page with expandable pillar sub-metrics
+class AuraDetailView extends StatefulWidget {
   final AuraData auraData;
 
   const AuraDetailView({Key? key, required this.auraData}) : super(key: key);
+
+  @override
+  State<AuraDetailView> createState() => _AuraDetailViewState();
+}
+
+class _AuraDetailViewState extends State<AuraDetailView> {
+  String? expandedPillarKey;
+
+  AuraData get auraData => widget.auraData;
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +79,7 @@ class AuraDetailView extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Detailed analysis across all 5 measurement pillars',
+              'Tap a pillar to see detailed sub-metrics',
               style: TextStyle(
                 fontSize: 14,
                 color: kcTextMutedColor.withOpacity(0.8),
@@ -79,8 +88,9 @@ class AuraDetailView extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // Pillar Cards
-            ...pillars.map((pillar) => _buildPillarCard(pillar)),
+            // Pillar Cards (with index for key tracking)
+            ...pillars.asMap().entries.map(
+                (entry) => _buildPillarCard(entry.value, entry.key.toString())),
 
             const SizedBox(height: 32),
 
@@ -110,6 +120,65 @@ class AuraDetailView extends StatelessWidget {
       ),
       child: Column(
         children: [
+          // Department Profile Badge
+          if (auraData.departmentProfile != null)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: kcPrimaryColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.business_rounded,
+                    size: 14,
+                    color: kcPrimaryColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    auraData.departmentProfile!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: kcPrimaryColor,
+                    ),
+                  ),
+                  if (auraData.automationRate != null) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: kcTealColor.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 10,
+                            color: kcTealColor,
+                          ),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${auraData.automationRate!.round()}% Auto',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: kcTealColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           // Large Radial Progress
           SizedBox(
             width: 160,
@@ -263,7 +332,9 @@ class AuraDetailView extends StatelessWidget {
     );
   }
 
-  Widget _buildPillarCard(PillarDetail pillar) {
+  Widget _buildPillarCard(PillarDetail pillar, String pillarKey) {
+    final isExpanded = expandedPillarKey == pillarKey;
+
     // Determine data source label
     String sourceLabel;
     if (pillar.dataSource == 'auto') {
@@ -274,146 +345,329 @@ class AuraDetailView extends StatelessWidget {
       sourceLabel = 'Team Lead';
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kcBorderColor.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          if (expandedPillarKey == pillarKey) {
+            expandedPillarKey = null;
+          } else {
+            expandedPillarKey = pillarKey;
+          }
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: isExpanded
+                ? kcPrimaryColor.withOpacity(0.3)
+                : kcBorderColor.withOpacity(0.5),
+            width: isExpanded ? 2 : 1,
           ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: kcPrimaryColor.withOpacity(0.08),
-                  borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: isExpanded
+                  ? kcPrimaryColor.withOpacity(0.08)
+                  : Colors.black.withOpacity(0.02),
+              blurRadius: isExpanded ? 16 : 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Header Row
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: kcPrimaryColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Icon(
+                    _getPillarIcon(pillar.name),
+                    color: kcPrimaryColor,
+                    size: 22,
+                  ),
                 ),
-                child: Icon(
-                  _getPillarIcon(pillar.name),
-                  color: kcPrimaryColor,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      pillar.name,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: kcTextColor,
-                        letterSpacing: -0.3,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        pillar.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: kcTextColor,
+                          letterSpacing: -0.3,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 6),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: kcBackgroundColor,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: kcBorderColor),
+                            ),
+                            child: Text(
+                              sourceLabel,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: kcTextMutedColor.withOpacity(0.8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            '${pillar.weight.round()}% Weight',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: kcTextMutedColor.withOpacity(0.6),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
                     Row(
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: kcBackgroundColor,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: kcBorderColor),
-                          ),
-                          child: Text(
-                            sourceLabel,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: kcTextMutedColor.withOpacity(0.8),
-                            ),
+                        Text(
+                          '${pillar.score.round()}%',
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: kcTextColor,
+                            letterSpacing: -1,
                           ),
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          '${pillar.weight.round()}% Weight',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: kcTextMutedColor.withOpacity(0.6),
-                            fontWeight: FontWeight.w500,
+                        AnimatedRotation(
+                          turns: isExpanded ? 0.5 : 0,
+                          duration: const Duration(milliseconds: 200),
+                          child: Icon(
+                            Icons.keyboard_arrow_down,
+                            color: kcTextMutedColor.withOpacity(0.5),
+                            size: 24,
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${pillar.score.round()}%',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: kcTextColor,
-                      letterSpacing: -1,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Stack(
-            children: [
-              Container(
-                height: 6,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: kcBackgroundColor,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              FractionallySizedBox(
-                widthFactor: pillar.score / 100,
-                child: Container(
+              ],
+            ),
+            const SizedBox(height: 20),
+            // Progress Bar
+            Stack(
+              children: [
+                Container(
                   height: 6,
+                  width: double.infinity,
                   decoration: BoxDecoration(
-                    color: _getScoreColor(pillar.score),
+                    color: kcBackgroundColor,
                     borderRadius: BorderRadius.circular(3),
                   ),
                 ),
+                FractionallySizedBox(
+                  widthFactor: pillar.score / 100,
+                  child: Container(
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: _getScoreColor(pillar.score),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Text(
+                  'Contributes ',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: kcTextMutedColor.withOpacity(0.6),
+                  ),
+                ),
+                Text(
+                  '+${pillar.contribution.toStringAsFixed(1)} points',
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: kcTextColor,
+                  ),
+                ),
+              ],
+            ),
+            // Expanded Sub-metrics Section
+            if (isExpanded && pillar.subMetrics.isNotEmpty) ...[
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: kcBackgroundColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.analytics_outlined,
+                          size: 16,
+                          color: kcPrimaryColor,
+                        ),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Sub-Metrics Breakdown',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: kcTextColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    ...pillar.subMetrics.map((sm) => _buildSubMetricRow(sm)),
+                  ],
+                ),
+              ),
+            ] else if (isExpanded && pillar.subMetrics.isEmpty) ...[
+              const SizedBox(height: 20),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: kcBackgroundColor,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 16,
+                      color: kcTextMutedColor.withOpacity(0.6),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Detailed sub-metrics will be available soon',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: kcTextMutedColor.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubMetricRow(SubMetricDetail sm) {
+    // Get source icon
+    IconData sourceIcon;
+    switch (sm.source.toLowerCase()) {
+      case 'auto':
+        sourceIcon = Icons.settings_suggest;
+        break;
+      case 'team_lead':
+        sourceIcon = Icons.person;
+        break;
+      case 'peer_feedback':
+        sourceIcon = Icons.people;
+        break;
+      case 'admin':
+        sourceIcon = Icons.admin_panel_settings;
+        break;
+      default:
+        sourceIcon = Icons.data_usage;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          // Source Icon
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: kcBorderColor.withOpacity(0.5)),
+            ),
+            child: Icon(
+              sourceIcon,
+              size: 14,
+              color: kcPrimaryColor,
+            ),
           ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Text(
-                'Contributes ',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: kcTextMutedColor.withOpacity(0.6),
+          const SizedBox(width: 12),
+          // Name and Weight
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  sm.displayName,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: kcTextColor,
+                  ),
                 ),
-              ),
-              Text(
-                '+${pillar.contribution.toStringAsFixed(1)} points',
-                style: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: kcTextColor,
+                Text(
+                  '${sm.weightInPillar.round()}% of pillar',
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: kcTextMutedColor.withOpacity(0.6),
+                  ),
                 ),
+              ],
+            ),
+          ),
+          // Score
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: _getScoreColor(sm.score).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '${sm.score.round()}%',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: _getScoreColor(sm.score),
               ),
-            ],
+            ),
           ),
         ],
       ),

@@ -9,6 +9,7 @@ import 'package:schoolable/ui/views/profile/profile_view.dart';
 import 'package:schoolable/ui/views/tasks/task_detail_view.dart';
 import 'package:schoolable/ui/views/home/announcements_view.dart';
 import 'package:schoolable/ui/views/home/aura_detail_view.dart';
+import 'package:schoolable/ui/views/home/team_insights_view.dart';
 import 'package:schoolable/ui/common/widgets/app_avatar.dart';
 
 import 'package:schoolable/ui/views/compliance/compliance_submission_view.dart';
@@ -408,89 +409,136 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                     itemCount: viewModel.kpiCards.length,
                     itemBuilder: (context, index) {
                       final kpi = viewModel.kpiCards[index];
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: kcBorderColor),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.02),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  kpi.label,
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: kcTextMutedColor,
-                                    letterSpacing: 0.5,
-                                    overflow: TextOverflow.ellipsis,
+                      final isTeamScore = kpi.label == 'Team Score';
+
+                      return GestureDetector(
+                        onTap: isTeamScore
+                            ? () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const TeamInsightsView(),
                                   ),
-                                ),
-                                _getKpiIcon(kpi.label),
-                              ],
+                                );
+                              }
+                            : null,
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isTeamScore
+                                  ? const Color(0xFF6366F1).withOpacity(0.3)
+                                  : kcBorderColor,
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  kpi.value,
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    color: kcTextColor,
-                                    letterSpacing: -0.5,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                if (kpi.trend != '--')
-                                  Row(
-                                    children: [
-                                      Text(
-                                        kpi.trend,
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w600,
-                                          color: kpi.trend.startsWith('+')
-                                              ? kcTealColor
-                                              : kcRoseColor,
-                                        ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: isTeamScore
+                                    ? const Color(0xFF6366F1).withOpacity(0.08)
+                                    : Colors.black.withValues(alpha: 0.02),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      kpi.label,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.w600,
+                                        color: isTeamScore
+                                            ? const Color(0xFF6366F1)
+                                            : kcTextMutedColor,
+                                        letterSpacing: 0.5,
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'vs last week',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: kcTextMutedColor.withValues(
-                                              alpha: 0.7),
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                else
-                                  Text(
-                                    'Current quarter',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: kcTextMutedColor.withValues(
-                                          alpha: 0.7),
                                     ),
                                   ),
-                              ],
-                            ),
-                          ],
+                                  _getKpiIcon(kpi.label),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    kpi.value,
+                                    style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w700,
+                                      color: kcTextColor,
+                                      letterSpacing: -0.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  if (isTeamScore)
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.insights,
+                                          size: 12,
+                                          color: const Color(0xFF6366F1)
+                                              .withOpacity(0.7),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'View Insights',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: const Color(0xFF6366F1)
+                                                .withOpacity(0.7),
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else if (kpi.trend != '--')
+                                    Row(
+                                      children: [
+                                        Text(
+                                          kpi.trend,
+                                          style: TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: kpi.trend.startsWith('+')
+                                                ? kcTealColor
+                                                : kcRoseColor,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          'vs last week',
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            color: kcTextMutedColor.withValues(
+                                                alpha: 0.7),
+                                          ),
+                                        ),
+                                      ],
+                                    )
+                                  else
+                                    Text(
+                                      'Current quarter',
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        color: kcTextMutedColor.withValues(
+                                            alpha: 0.7),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -1173,6 +1221,10 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
       case 'Compliance':
         icon = Icons.verified_user_rounded;
         color = kcPurpleColor;
+        break;
+      case 'Team Score':
+        icon = Icons.groups_rounded;
+        color = const Color(0xFF6366F1);
         break;
       case 'QGPA':
         icon = Icons.school_rounded;

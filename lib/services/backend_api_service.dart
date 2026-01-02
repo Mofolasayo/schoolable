@@ -1237,6 +1237,118 @@ class BackendApiService {
     }
   }
 
+  /// Get AUTO-CALCULATED Aura dashboard with department-specific KPIs
+  /// This uses real-time data from tasks, attendance, compliance, and training
+  Future<Map<String, dynamic>?> getAutoAuraDashboard() async {
+    try {
+      final result = await _get('/api/performance/my-aura/auto');
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching auto Aura dashboard: $e');
+      return null;
+    }
+  }
+
+  /// Get auto-calculated Aura dashboard for a specific employee
+  Future<Map<String, dynamic>?> getAutoAuraDashboardFor(
+      String employeeId) async {
+    try {
+      final result =
+          await _get('/api/performance/employee/$employeeId/aura/auto');
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching auto Aura for $employeeId: $e');
+      return null;
+    }
+  }
+
+  /// Get available department KPI profiles
+  Future<Map<String, dynamic>?> getDepartmentKpis() async {
+    try {
+      final result = await _get('/api/performance/department-kpis');
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching department KPIs: $e');
+      return null;
+    }
+  }
+
+  /// Submit extended peer feedback with all rating fields
+  Future<bool> submitExtendedPeerFeedback({
+    required String toEmployeeId,
+    required String quarter,
+    required int year,
+    required int supportRating,
+    int? collaborationRating,
+    int? adaptabilityRating,
+    int? valuesRating,
+    int? accountabilityRating,
+    int? feedbackRating,
+    // For team leads
+    int? orgGuidanceRating,
+    int? peopleCultureRating,
+    int? influenceRating,
+    String? strengths,
+    String? areasForImprovement,
+    bool isAnonymous = true,
+  }) async {
+    try {
+      await _post(
+          '/api/performance/peer-feedback',
+          {
+            'toEmployeeId': toEmployeeId,
+            'quarter': quarter,
+            'year': year,
+            'supportRating': supportRating,
+            if (collaborationRating != null)
+              'collaborationRating': collaborationRating,
+            if (adaptabilityRating != null)
+              'adaptabilityRating': adaptabilityRating,
+            if (valuesRating != null) 'valuesRating': valuesRating,
+            if (accountabilityRating != null)
+              'accountabilityRating': accountabilityRating,
+            if (feedbackRating != null) 'feedbackRating': feedbackRating,
+            if (orgGuidanceRating != null)
+              'orgGuidanceRating': orgGuidanceRating,
+            if (peopleCultureRating != null)
+              'peopleCultureRating': peopleCultureRating,
+            if (influenceRating != null) 'influenceRating': influenceRating,
+            if (strengths != null) 'strengths': strengths,
+            if (areasForImprovement != null)
+              'areasForImprovement': areasForImprovement,
+            'isAnonymous': isAnonymous,
+          },
+          auth: true);
+      return true;
+    } catch (e) {
+      print('Error submitting extended peer feedback: $e');
+      return false;
+    }
+  }
+
+  /// Get peer feedback submission status
+  Future<Map<String, dynamic>?> getPeerFeedbackStatus() async {
+    try {
+      final result = await _get('/api/performance/peer-feedback/status');
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching peer feedback status: $e');
+      return null;
+    }
+  }
+
   // --- GROWTH & LEARNING / CERTIFICATES ---
 
   /// Check certificate submission status for current quarter
@@ -1290,5 +1402,209 @@ class BackendApiService {
       print('Error deleting account: $e');
       rethrow;
     }
+  }
+
+  // --- COMPLIANCE ---
+
+  /// Get pending compliance items for the current user
+  Future<List<Map<String, dynamic>>> getMyComplianceItems() async {
+    try {
+      final result = await _get('/compliance/my-items', auth: true);
+      if (result is List) {
+        return result.map((item) => Map<String, dynamic>.from(item)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching compliance items: $e');
+      return [];
+    }
+  }
+
+  /// Submit a compliance item (acknowledge policy or upload document)
+  /// [policyId] - The ID of the policy to submit for
+  /// [type] - 'policy' for acknowledgement, 'upload' for document upload
+  /// [fileUrl] - URL of uploaded file (for upload type)
+  /// [fileName] - Name of uploaded file (for upload type)
+  Future<Map<String, dynamic>> submitCompliance({
+    required String policyId,
+    required String type,
+    String? fileUrl,
+    String? fileName,
+  }) async {
+    try {
+      final body = <String, dynamic>{
+        'type': type,
+      };
+
+      if (type == 'upload') {
+        body['fileUrl'] = fileUrl;
+        body['fileName'] = fileName;
+      }
+
+      final result = await _post(
+        '/compliance/my-items/$policyId/submit',
+        body,
+        auth: true,
+      );
+      return result;
+    } catch (e) {
+      print('Error submitting compliance: $e');
+      rethrow;
+    }
+  }
+
+  /// Submit a policy acknowledgement
+  Future<bool> acknowledgePolicy(String policyId) async {
+    try {
+      await submitCompliance(policyId: policyId, type: 'policy');
+      return true;
+    } catch (e) {
+      print('Error acknowledging policy: $e');
+      return false;
+    }
+  }
+
+  /// Submit a compliance document upload
+  Future<bool> submitComplianceDocument({
+    required String policyId,
+    required String filePath,
+    required String fileName,
+  }) async {
+    try {
+      // First upload the file
+      final uploadResult =
+          await uploadFile(filePath, fileName, folder: 'compliance');
+      final fileUrl = uploadResult['url'] as String?;
+
+      if (fileUrl == null) {
+        throw Exception('Failed to upload file');
+      }
+
+      // Then submit the compliance
+      await submitCompliance(
+        policyId: policyId,
+        type: 'upload',
+        fileUrl: fileUrl,
+        fileName: fileName,
+      );
+      return true;
+    } catch (e) {
+      print('Error submitting compliance document: $e');
+      return false;
+    }
+  }
+
+  // ==================== TEAM KPIs & AI INSIGHTS ====================
+
+  /// Get team KPIs for the current user's department
+  Future<Map<String, dynamic>?> getTeamKpis(
+      {String? quarter, int? year}) async {
+    try {
+      String endpoint = '/api/kpi/team-kpis';
+      final params = <String, String>{};
+      if (quarter != null) params['quarter'] = quarter;
+      if (year != null) params['year'] = year.toString();
+      if (params.isNotEmpty) {
+        endpoint +=
+            '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+      }
+      final result = await _get(endpoint);
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching team KPIs: $e');
+      return null;
+    }
+  }
+
+  /// Get latest AI insight for the team
+  Future<Map<String, dynamic>?> getTeamInsight() async {
+    try {
+      final result = await _get('/api/kpi/insights/team');
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching team insight: $e');
+      return null;
+    }
+  }
+
+  /// Get team quarterly score
+  Future<Map<String, dynamic>?> getMyTeamScore(
+      {String? quarter, int? year}) async {
+    try {
+      String endpoint = '/api/kpi/score/my-team';
+      final params = <String, String>{};
+      if (quarter != null) params['quarter'] = quarter;
+      if (year != null) params['year'] = year.toString();
+      if (params.isNotEmpty) {
+        endpoint +=
+            '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+      }
+      final result = await _get(endpoint);
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching team score: $e');
+      return null;
+    }
+  }
+
+  // ===================== PEER HELPFULNESS RATINGS =====================
+
+  /// Get colleagues to rate for helpfulness
+  Future<Map<String, dynamic>> getColleaguesToRate(
+      {int? weekNumber, int? year}) async {
+    String endpoint = '/api/peer-helpfulness/colleagues';
+    final params = <String, String>{};
+    if (weekNumber != null) params['weekNumber'] = weekNumber.toString();
+    if (year != null) params['year'] = year.toString();
+    if (params.isNotEmpty) {
+      endpoint +=
+          '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    }
+    return await _get(endpoint);
+  }
+
+  /// Submit weekly peer helpfulness ratings
+  Future<Map<String, dynamic>> submitPeerHelpfulnessRatings(
+    List<Map<String, dynamic>> ratings, {
+    int? weekNumber,
+    int? year,
+  }) async {
+    String endpoint = '/api/peer-helpfulness/submit';
+    final params = <String, String>{};
+    if (weekNumber != null) params['weekNumber'] = weekNumber.toString();
+    if (year != null) params['year'] = year.toString();
+    if (params.isNotEmpty) {
+      endpoint +=
+          '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    }
+    return await _post(endpoint, {'ratings': ratings}, auth: true);
+  }
+
+  /// Get peer helpfulness rating status for current user
+  Future<Map<String, dynamic>> getPeerHelpfulnessStatus() async {
+    return await _get('/api/peer-helpfulness/status');
+  }
+
+  /// Get ratings received from colleagues
+  Future<Map<String, dynamic>> getReceivedRatings(
+      {int? weekNumber, int? year}) async {
+    String endpoint = '/api/peer-helpfulness/received';
+    final params = <String, String>{};
+    if (weekNumber != null) params['weekNumber'] = weekNumber.toString();
+    if (year != null) params['year'] = year.toString();
+    if (params.isNotEmpty) {
+      endpoint +=
+          '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+    }
+    return await _get(endpoint);
   }
 }

@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:schoolable/app/app.locator.dart';
+import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/home/home_viewmodel.dart';
 
@@ -21,6 +23,7 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
   bool _isAccepted = false; // For policy acknowledgement
 
   final ImagePicker _picker = ImagePicker();
+  final BackendApiService _backendService = locator<BackendApiService>();
 
   Future<void> _pickImage() async {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
@@ -51,24 +54,56 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
       _isSubmitting = true;
     });
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
+    try {
+      bool success = false;
 
-    if (mounted) {
-      setState(() {
-        _isSubmitting = false;
-        widget.item.status = 'complied'; // Optimistic update
-      });
+      if (widget.item.type == 'policy') {
+        // Policy acknowledgement
+        success = await _backendService.acknowledgePolicy(widget.item.id);
+      } else if (widget.item.type == 'upload' && _selectedFile != null) {
+        // Document upload
+        success = await _backendService.submitComplianceDocument(
+          policyId: widget.item.id,
+          filePath: _selectedFile!.path,
+          fileName: _selectedFile!.path.split('/').last,
+        );
+      }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Submitted successfully!'),
-          backgroundColor: kcTealColor,
-        ),
-      );
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
 
-      // Navigate back to notifications
-      Navigator.pop(context);
+        if (success) {
+          widget.item.status = 'complied';
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Submitted successfully!'),
+              backgroundColor: kcTealColor,
+            ),
+          );
+          Navigator.pop(context, true); // Return true to indicate success
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Submission failed. Please try again.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

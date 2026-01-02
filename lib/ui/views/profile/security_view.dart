@@ -15,21 +15,22 @@ class SecurityView extends StackedView<SecurityViewModel> {
     return Scaffold(
       backgroundColor: kcBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded, color: kcTextColor),
-          onPressed: viewModel.goBack,
-        ),
         title: const Text(
           'Security',
           style: TextStyle(
-            color: kcTextColor,
             fontSize: 18,
             fontWeight: FontWeight.w600,
+            color: kcTextColor,
           ),
         ),
         centerTitle: true,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new,
+              size: 20, color: kcTextColor),
+          onPressed: viewModel.goBack,
+        ),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -38,7 +39,7 @@ class SecurityView extends StackedView<SecurityViewModel> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Security Options Section
-              _buildSectionHeader('Password & Authentication'),
+              _buildSectionHeader('Authentication'),
               const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(
@@ -49,7 +50,7 @@ class SecurityView extends StackedView<SecurityViewModel> {
                 child: Column(
                   children: [
                     _SecurityMenuItem(
-                      icon: Icons.key_rounded,
+                      icon: Icons.lock_outline_rounded,
                       title: 'Change Password',
                       subtitle: 'Update your account password',
                       onTap: () {
@@ -58,11 +59,11 @@ class SecurityView extends StackedView<SecurityViewModel> {
                     ),
                     const Divider(height: 1, color: kcBorderColor),
                     _SecurityMenuItem(
-                      icon: Icons.fingerprint,
+                      icon: Icons.fingerprint_rounded,
                       title: 'Biometric Login',
                       subtitle: 'Use fingerprint or face ID',
                       trailing: Switch(
-                        value: false,
+                        value: false, // Todo: bind to viewmodel
                         onChanged: (value) {
                           // TODO: Toggle biometric
                         },
@@ -72,7 +73,7 @@ class SecurityView extends StackedView<SecurityViewModel> {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               // Sessions Section
               _buildSectionHeader('Active Sessions'),
@@ -86,15 +87,18 @@ class SecurityView extends StackedView<SecurityViewModel> {
                 child: Column(
                   children: [
                     _SecurityMenuItem(
-                      icon: Icons.phone_iphone,
+                      icon: Icons.phone_iphone_rounded,
                       title: 'This Device',
                       subtitle: 'Currently active',
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                            horizontal: 10, vertical: 4),
                         decoration: BoxDecoration(
                           color: const Color(0xFF10B981).withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: const Color(0xFF10B981).withOpacity(0.2),
+                          ),
                         ),
                         child: const Text(
                           'Active',
@@ -111,7 +115,6 @@ class SecurityView extends StackedView<SecurityViewModel> {
                       icon: Icons.logout_rounded,
                       title: 'Log Out All Devices',
                       subtitle: 'Sign out from all other devices',
-                      iconColor: const Color(0xFFF97316),
                       onTap: () {
                         // TODO: Implement log out all devices
                       },
@@ -119,26 +122,25 @@ class SecurityView extends StackedView<SecurityViewModel> {
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               // Danger Zone Section
-              _buildSectionHeader('Danger Zone', isDestructive: true),
+              _buildSectionHeader('Danger Zone'),
               const SizedBox(height: 12),
               Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: const Color(0xFFEF4444).withOpacity(0.3)),
+                  border: Border.all(color: kcBorderColor),
                 ),
                 child: Column(
                   children: [
                     _SecurityMenuItem(
-                      icon: Icons.delete_forever_rounded,
+                      icon: Icons.delete_outline_rounded,
                       title: 'Delete Account',
-                      subtitle: 'Permanently delete your account and all data',
-                      iconColor: const Color(0xFFEF4444),
-                      titleColor: const Color(0xFFEF4444),
+                      subtitle: 'Permanently remove your account',
+                      iconColor: kcRoseColor,
+                      titleColor: kcRoseColor,
                       onTap: viewModel.isDeleting
                           ? null
                           : viewModel.confirmDeleteAccount,
@@ -148,12 +150,13 @@ class SecurityView extends StackedView<SecurityViewModel> {
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: Color(0xFFEF4444),
+                                color: kcRoseColor,
                               ),
                             )
                           : const Icon(
                               Icons.chevron_right_rounded,
-                              color: Color(0xFFEF4444),
+                              color: kcTextMutedColor,
+                              size: 20,
                             ),
                     ),
                   ],
@@ -165,17 +168,16 @@ class SecurityView extends StackedView<SecurityViewModel> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEF4444).withOpacity(0.05),
+                  color: kcRoseColor.withOpacity(0.05),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: const Color(0xFFEF4444).withOpacity(0.2)),
+                  border: Border.all(color: kcRoseColor.withOpacity(0.2)),
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Icon(
-                      Icons.warning_amber_rounded,
-                      color: const Color(0xFFEF4444).withOpacity(0.7),
+                      Icons.info_outline_rounded,
+                      color: kcRoseColor.withOpacity(0.8),
                       size: 20,
                     ),
                     const SizedBox(width: 12),
@@ -183,8 +185,8 @@ class SecurityView extends StackedView<SecurityViewModel> {
                       child: Text(
                         'Deleting your account is permanent. All your data, including attendance records, tasks, and performance history will be permanently removed.',
                         style: TextStyle(
-                          color: const Color(0xFFEF4444).withOpacity(0.8),
-                          fontSize: 12,
+                          color: kcRoseColor.withOpacity(0.9),
+                          fontSize: 13,
                           height: 1.5,
                         ),
                       ),
@@ -200,19 +202,14 @@ class SecurityView extends StackedView<SecurityViewModel> {
     );
   }
 
-  Widget _buildSectionHeader(String title, {bool isDestructive = false}) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4),
-      child: Text(
-        title.toUpperCase(),
-        style: TextStyle(
-          color: isDestructive
-              ? const Color(0xFFEF4444)
-              : kcTextMutedColor.withOpacity(0.7),
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0.8,
-        ),
+  Widget _buildSectionHeader(String title) {
+    return Text(
+      title,
+      style: const TextStyle(
+        fontSize: 14,
+        fontWeight: FontWeight.w600,
+        color: kcTextMutedColor,
+        letterSpacing: 0.5,
       ),
     );
   }
@@ -245,24 +242,16 @@ class _SecurityMenuItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: (iconColor ?? kcPrimaryColor).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                icon,
-                color: iconColor ?? kcPrimaryColor,
-                size: 20,
-              ),
+            Icon(
+              icon,
+              color: iconColor ?? kcTextColor,
+              size: 22,
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,7 +270,7 @@ class _SecurityMenuItem extends StatelessWidget {
                       subtitle!,
                       style: const TextStyle(
                         color: kcTextMutedColor,
-                        fontSize: 12,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -294,7 +283,7 @@ class _SecurityMenuItem extends StatelessWidget {
               const Icon(
                 Icons.chevron_right_rounded,
                 color: kcTextMutedColor,
-                size: 22,
+                size: 20,
               ),
           ],
         ),

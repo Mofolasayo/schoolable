@@ -73,7 +73,7 @@ class ComplianceItem {
   String status; // 'pending', 'complied'
 }
 
-/// Aura Performance Score Data
+/// Aura Performance Score Data (Auto-calculated with Department KPIs)
 class AuraData {
   AuraData({
     required this.auraScore,
@@ -82,6 +82,10 @@ class AuraData {
     required this.pillars,
     this.quarterStart,
     this.lastUpdated,
+    this.department,
+    this.departmentProfile,
+    this.automationRate,
+    this.calculatedAt,
   });
 
   final double auraScore;
@@ -90,6 +94,10 @@ class AuraData {
   final Map<String, PillarDetail> pillars;
   final String? quarterStart;
   final String? lastUpdated;
+  final String? department;
+  final String? departmentProfile; // e.g., "Engineering", "Sales"
+  final double? automationRate; // e.g., 80.0 for 80% automated
+  final String? calculatedAt;
 
   factory AuraData.fromMap(Map<String, dynamic> map) {
     final pillarsMap = map['pillars'] as Map<String, dynamic>? ?? {};
@@ -108,6 +116,10 @@ class AuraData {
       pillars: pillars,
       quarterStart: map['quarterStart']?.toString(),
       lastUpdated: map['lastUpdated']?.toString(),
+      department: map['department']?.toString(),
+      departmentProfile: map['departmentProfile']?.toString(),
+      automationRate: (map['automationRate'] as num?)?.toDouble(),
+      calculatedAt: map['calculatedAt']?.toString(),
     );
   }
 }
@@ -119,6 +131,7 @@ class PillarDetail {
     required this.weight,
     required this.contribution,
     required this.dataSource,
+    this.subMetrics = const [],
   });
 
   final String name;
@@ -126,14 +139,142 @@ class PillarDetail {
   final double weight;
   final double contribution;
   final String dataSource;
+  final List<SubMetricDetail> subMetrics;
 
   factory PillarDetail.fromMap(Map<String, dynamic> map) {
+    final subMetricsList = <SubMetricDetail>[];
+    final rawSubMetrics = map['subMetrics'] as List<dynamic>? ?? [];
+    for (final sm in rawSubMetrics) {
+      if (sm is Map) {
+        subMetricsList
+            .add(SubMetricDetail.fromMap(Map<String, dynamic>.from(sm)));
+      }
+    }
+
     return PillarDetail(
       name: map['name']?.toString() ?? '',
       score: (map['score'] as num?)?.toDouble() ?? 0.0,
       weight: (map['weight'] as num?)?.toDouble() ?? 0.0,
       contribution: (map['contribution'] as num?)?.toDouble() ?? 0.0,
       dataSource: map['dataSource']?.toString() ?? 'auto',
+      subMetrics: subMetricsList,
+    );
+  }
+}
+
+/// Sub-metric detail for enhanced Aura display
+class SubMetricDetail {
+  SubMetricDetail({
+    required this.key,
+    required this.displayName,
+    required this.score,
+    required this.source,
+    required this.weightInPillar,
+    required this.contribution,
+  });
+
+  final String key;
+  final String displayName;
+  final double score;
+  final String source;
+  final double weightInPillar;
+  final double contribution;
+
+  factory SubMetricDetail.fromMap(Map<String, dynamic> map) {
+    return SubMetricDetail(
+      key: map['key']?.toString() ?? '',
+      displayName: map['displayName']?.toString() ?? '',
+      score: (map['score'] as num?)?.toDouble() ?? 0.0,
+      source: map['source']?.toString() ?? 'auto',
+      weightInPillar: (map['weightInPillar'] as num?)?.toDouble() ?? 20.0,
+      contribution: (map['contribution'] as num?)?.toDouble() ?? 0.0,
+    );
+  }
+}
+
+/// Team Score Data - aggregated team KPI achievement
+class TeamScoreData {
+  TeamScoreData({
+    required this.teamName,
+    required this.department,
+    required this.quarter,
+    required this.year,
+    required this.kpiScore,
+    required this.overallScore,
+    required this.grade,
+    this.aiSummary,
+  });
+
+  final String teamName;
+  final String department;
+  final String quarter;
+  final int year;
+  final double kpiScore;
+  final double overallScore;
+  final String grade;
+  final String? aiSummary;
+
+  factory TeamScoreData.fromMap(Map<String, dynamic> map) {
+    return TeamScoreData(
+      teamName: map['teamName']?.toString() ?? '',
+      department: map['department']?.toString() ?? '',
+      quarter: map['quarter']?.toString() ?? '',
+      year: (map['year'] as num?)?.toInt() ?? 2026,
+      kpiScore: (map['kpiAchievementScore'] as num?)?.toDouble() ?? 0.0,
+      overallScore: (map['overallTeamScore'] as num?)?.toDouble() ?? 0.0,
+      grade: map['grade']?.toString() ?? 'N/A',
+      aiSummary: map['aiSummary']?.toString(),
+    );
+  }
+}
+
+/// Team AI Insight Data - weekly AI-generated insights
+class TeamInsightData {
+  TeamInsightData({
+    required this.weekNumber,
+    required this.quarter,
+    required this.year,
+    required this.kpiScore,
+    required this.summary,
+    this.topPerforming = const [],
+    this.needsAttention = const [],
+    this.recommendations = const [],
+    this.riskAlerts = const [],
+  });
+
+  final int weekNumber;
+  final String quarter;
+  final int year;
+  final double kpiScore;
+  final String summary;
+  final List<String> topPerforming;
+  final List<String> needsAttention;
+  final List<String> recommendations;
+  final List<String> riskAlerts;
+
+  factory TeamInsightData.fromMap(Map<String, dynamic> map) {
+    // Parse nested insights
+    final insights = map['insights'] as Map<String, dynamic>? ?? {};
+    final recs = map['recommendations'] as Map<String, dynamic>? ?? {};
+    final risks = map['riskAlerts'] as Map<String, dynamic>? ?? {};
+
+    List<String> toStringList(dynamic value) {
+      if (value is List) {
+        return value.map((e) => e.toString()).toList();
+      }
+      return [];
+    }
+
+    return TeamInsightData(
+      weekNumber: (map['weekNumber'] as num?)?.toInt() ?? 0,
+      quarter: map['quarter']?.toString() ?? '',
+      year: (map['year'] as num?)?.toInt() ?? 2026,
+      kpiScore: (map['kpiScore'] as num?)?.toDouble() ?? 0.0,
+      summary: map['summary']?.toString() ?? 'No insights available',
+      topPerforming: toStringList(insights['topPerforming']),
+      needsAttention: toStringList(insights['needsAttention']),
+      recommendations: toStringList(recs['items']),
+      riskAlerts: toStringList(risks['items']),
     );
   }
 }
@@ -159,8 +300,18 @@ class HomeViewModel extends IndexTrackingViewModel {
   AuraData? auraData;
   bool isLoadingAura = false;
 
+  // Team Score & AI Insights
+  TeamScoreData? teamScore;
+  TeamInsightData? teamInsight;
+  bool isLoadingTeamData = false;
+
   // Compliance Data
   List<ComplianceItem> complianceItems = [];
+
+  // Peer Helpfulness Rating Status
+  bool hasPendingPeerRatings = false;
+  int pendingPeerRatingsCount = 0;
+  String? peerRatingPromptMessage;
 
   HomeViewModel() {
     _initialize();
@@ -173,7 +324,9 @@ class HomeViewModel extends IndexTrackingViewModel {
     _fetchAnnouncements();
     _fetchTasks();
     _fetchAuraData(); // Fetch Aura score
+    _fetchTeamData(); // Fetch Team Score & AI Insights
     _fetchComplianceItems(); // Fetch Compliance items
+    _fetchPeerHelpfulnessStatus(); // Check if peer ratings needed
 
     _connectWebSocket();
 
@@ -259,18 +412,27 @@ class HomeViewModel extends IndexTrackingViewModel {
     ]);
   }
 
-  /// Fetch Aura performance data from backend
+  /// Fetch Auto-calculated Aura performance data from backend
+  /// Uses department-specific KPIs for real-time calculation
   Future<void> _fetchAuraData() async {
     isLoadingAura = true;
     rebuildUi();
 
     try {
-      final data = await _backendService.getMyAuraDashboard();
+      // Use auto-aura endpoint for real-time calculation with department KPIs
+      final data = await _backendService.getAutoAuraDashboard();
       if (data != null) {
         auraData = AuraData.fromMap(data);
+        print(
+            '✅ Auto-Aura loaded: ${auraData?.auraScore} (${auraData?.departmentProfile})');
       } else {
-        // Use demo data if API returns null
-        _setDemoAuraData();
+        // Fallback to standard endpoint if auto fails
+        final fallbackData = await _backendService.getMyAuraDashboard();
+        if (fallbackData != null) {
+          auraData = AuraData.fromMap(fallbackData);
+        } else {
+          _setDemoAuraData();
+        }
       }
     } catch (e) {
       print('Error fetching Aura data: $e');
@@ -282,27 +444,89 @@ class HomeViewModel extends IndexTrackingViewModel {
     }
   }
 
-  Future<void> _fetchComplianceItems() async {
-    // Mock data for now
-    complianceItems = [
-      ComplianceItem(
-        id: '1',
-        title: 'New Workplace Policy',
-        description:
-            'Please review and acknowledge the updated workplace anti-harassment policy. This is mandatory for all employees.',
-        deadline: DateTime.now().add(const Duration(days: 3)),
-        type: 'policy',
-      ),
-      ComplianceItem(
-        id: '2',
-        title: 'Submit ID Document',
-        description:
-            'Upload a clear copy of your government-issued ID for our improved security records.',
-        deadline: DateTime.now().add(const Duration(days: 7)),
-        type: 'upload',
-      ),
-    ];
+  /// Fetch Team Score and AI Insights from backend
+  Future<void> _fetchTeamData() async {
+    isLoadingTeamData = true;
     rebuildUi();
+
+    try {
+      // Fetch team score
+      final scoreData = await _backendService.getMyTeamScore();
+      if (scoreData != null && scoreData['overallTeamScore'] != null) {
+        teamScore = TeamScoreData.fromMap(scoreData);
+        print(
+            '✅ Team Score loaded: ${teamScore?.overallScore} (${teamScore?.grade})');
+      }
+
+      // Fetch latest team insight
+      final insightData = await _backendService.getTeamInsight();
+      if (insightData != null && insightData['kpiScore'] != null) {
+        teamInsight = TeamInsightData.fromMap(insightData);
+        print('✅ Team Insight loaded: Week ${teamInsight?.weekNumber}');
+      }
+    } catch (e) {
+      print('Error fetching team data: $e');
+      // Keep null on error - UI will show fallback
+    } finally {
+      isLoadingTeamData = false;
+      rebuildUi();
+    }
+  }
+
+  Future<void> _fetchComplianceItems() async {
+    try {
+      final items = await _backendService.getMyComplianceItems();
+
+      complianceItems = items.map((item) {
+        final deadlineStr = item['deadline'] as String?;
+        DateTime deadline;
+
+        if (deadlineStr != null) {
+          try {
+            deadline = DateTime.parse(deadlineStr);
+          } catch (_) {
+            deadline = DateTime.now().add(const Duration(days: 7));
+          }
+        } else {
+          deadline = DateTime.now().add(const Duration(days: 7));
+        }
+
+        return ComplianceItem(
+          id: item['id']?.toString() ?? item['policyId']?.toString() ?? '',
+          title: item['title'] ?? 'Untitled Policy',
+          description: item['description'] ?? '',
+          deadline: deadline,
+          type: item['type'] ?? 'policy',
+          status: item['status'] ?? 'pending',
+        );
+      }).toList();
+
+      rebuildUi();
+    } catch (e) {
+      print('Error fetching compliance items: $e');
+      // Keep empty list on error
+      complianceItems = [];
+      rebuildUi();
+    }
+  }
+
+  /// Fetch peer helpfulness rating status
+  Future<void> _fetchPeerHelpfulnessStatus() async {
+    try {
+      final result = await _backendService.getPeerHelpfulnessStatus();
+      final pendingRatings = result['pendingRatings'] as int? ?? 0;
+      final isComplete = result['isComplete'] as bool? ?? true;
+
+      hasPendingPeerRatings = !isComplete && pendingRatings > 0;
+      pendingPeerRatingsCount = pendingRatings;
+      peerRatingPromptMessage = result['promptMessage'] as String?;
+
+      rebuildUi();
+    } catch (e) {
+      print('Error fetching peer helpfulness status: $e');
+      hasPendingPeerRatings = false;
+      pendingPeerRatingsCount = 0;
+    }
   }
 
   /// Set placeholder Aura data for display when API is unavailable
@@ -485,15 +709,19 @@ class HomeViewModel extends IndexTrackingViewModel {
     final complianceValue =
         behavioralScore > 0 ? '${behavioralScore.round()}%' : '0%';
 
-    // QGPA: from Aura data
-    final qgpaValue = auraData?.qgpa ?? 0.0;
-    final qgpaDisplay = qgpaValue > 0 ? qgpaValue.toStringAsFixed(2) : '0.00';
+    // Team Score: from Team KPI data (replaces QGPA)
+    // Shows team's KPI achievement score with grade
+    final teamScoreValue =
+        teamScore != null ? '${teamScore!.overallScore.round()}%' : '--';
+    final teamGrade = teamScore?.grade ?? '';
+    final teamScoreDisplay =
+        teamScore != null ? '$teamScoreValue ($teamGrade)' : 'Team Score';
 
     return [
       KpiCard(label: 'Task Score', value: taskScoreValue, trend: '--'),
       KpiCard(label: 'Attendance', value: attendanceValue, trend: '--'),
       KpiCard(label: 'Compliance', value: complianceValue, trend: '--'),
-      KpiCard(label: 'QGPA', value: qgpaDisplay, trend: '--'),
+      KpiCard(label: 'Team Score', value: teamScoreDisplay, trend: teamGrade),
     ];
   }
 
