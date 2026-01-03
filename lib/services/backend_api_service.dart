@@ -130,6 +130,73 @@ class BackendApiService {
     throw Exception(_extractError(resp));
   }
 
+  Future<Map<String, dynamic>> _put(String path, Map<String, dynamic> body,
+      {bool auth = true}) async {
+    String? token;
+    if (auth) {
+      token = await _getToken();
+      if (token == null || token.isEmpty) {
+        print('❌ Auth required but no token available for $path');
+        throw Exception('Not authenticated');
+      }
+    }
+
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      if (auth && token != null && token.isNotEmpty)
+        'Authorization': 'Bearer $token',
+    };
+
+    print('📤 PUT $path (auth: $auth, hasToken: ${token != null})');
+
+    final resp = await http.put(
+      Uri.parse('$_baseUrl$path'),
+      headers: headers,
+      body: jsonEncode(body),
+    );
+
+    print('📥 Response: ${resp.statusCode}');
+    if (resp.statusCode >= 400) {
+      print('📥 Response body: ${resp.body}');
+    }
+
+    if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      return resp.body.isNotEmpty ? jsonDecode(resp.body) : {};
+    }
+    throw Exception(_extractError(resp));
+  }
+
+  Future<Map<String, dynamic>> _delete(String path, {bool auth = true}) async {
+    String? token;
+    if (auth) {
+      token = await _getToken();
+      if (token == null || token.isEmpty) {
+        print('❌ Auth required but no token available for $path');
+        throw Exception('Not authenticated');
+      }
+    }
+
+    final headers = <String, String>{
+      if (auth && token != null && token.isNotEmpty)
+        'Authorization': 'Bearer $token',
+    };
+
+    print('📤 DELETE $path (auth: $auth, hasToken: ${token != null})');
+
+    final resp =
+        await http.delete(Uri.parse('$_baseUrl$path'), headers: headers);
+
+    print('📥 Response: ${resp.statusCode}');
+    if (resp.statusCode >= 400) {
+      print('📥 Response body: ${resp.body}');
+    }
+
+    if (resp.statusCode >= 200 && resp.statusCode < 300) {
+      return resp.body.isNotEmpty ? jsonDecode(resp.body) : {};
+    }
+    throw Exception(_extractError(resp));
+  }
+
   Future<dynamic> _get(String path, {bool auth = true}) async {
     String? token;
     if (auth) {
@@ -1652,5 +1719,175 @@ class BackendApiService {
           '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
     }
     return await _get(endpoint);
+  }
+
+  // ==================== PUSH NOTIFICATIONS ====================
+
+  /// Register device token for push notifications
+  Future<Map<String, dynamic>> registerDeviceToken({
+    required String token,
+    required String platform,
+    String? deviceInfo,
+  }) async {
+    return await _post(
+        '/api/notifications/register-device',
+        {
+          'token': token,
+          'platform': platform,
+          'deviceInfo': deviceInfo,
+        },
+        auth: true);
+  }
+
+  /// Unregister device token
+  Future<Map<String, dynamic>> unregisterDeviceToken({
+    required String token,
+  }) async {
+    return await _post(
+        '/api/notifications/unregister-device',
+        {
+          'token': token,
+        },
+        auth: true);
+  }
+
+  /// Get notification history
+  Future<Map<String, dynamic>> getNotifications() async {
+    return await _get('/api/notifications');
+  }
+
+  /// Get unread notification count
+  Future<int> getUnreadNotificationCount() async {
+    try {
+      final result = await _get('/api/notifications/unread-count');
+      return result['unreadCount'] as int? ?? 0;
+    } catch (e) {
+      print('Error fetching unread count: $e');
+      return 0;
+    }
+  }
+
+  /// Mark notification as read
+  Future<bool> markNotificationAsRead(int notificationId) async {
+    try {
+      await _post('/api/notifications/$notificationId/read', {}, auth: true);
+      return true;
+    } catch (e) {
+      print('Error marking notification as read: $e');
+      return false;
+    }
+  }
+
+  /// Mark all notifications as read
+  Future<bool> markAllNotificationsAsRead() async {
+    try {
+      await _post('/api/notifications/mark-all-read', {}, auth: true);
+      return true;
+    } catch (e) {
+      print('Error marking all notifications as read: $e');
+      return false;
+    }
+  }
+
+  // ==================== DYNAMIC KPIS ====================
+
+  /// Get department KPI profile
+  Future<Map<String, dynamic>> getDepartmentKpiProfile(
+      String department) async {
+    return await _get('/api/kpi/department/$department/profile');
+  }
+
+  /// Get all department automation stats
+  Future<List<Map<String, dynamic>>> getDepartmentAutomationStats() async {
+    try {
+      final result = await _get('/api/kpi/departments/automation-stats');
+      if (result is List) {
+        return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Error fetching department stats: $e');
+      return [];
+    }
+  }
+
+  /// Create a new team KPI (for team leads)
+  Future<Map<String, dynamic>> createTeamKpi({
+    required String name,
+    required String description,
+    required double targetValue,
+    required String targetUnit,
+    required int weight,
+    String? quarter,
+    int? year,
+  }) async {
+    return await _post(
+        '/api/kpi/team-kpi',
+        {
+          'name': name,
+          'description': description,
+          'targetValue': targetValue,
+          'targetUnit': targetUnit,
+          'weight': weight,
+          'quarter': quarter ?? _getCurrentQuarter(),
+          'year': year ?? DateTime.now().year,
+        },
+        auth: true);
+  }
+
+  /// Update a team KPI
+  Future<Map<String, dynamic>> updateTeamKpi({
+    required String kpiId,
+    double? targetValue,
+    double? currentValue,
+    int? weight,
+    bool? isActive,
+  }) async {
+    final body = <String, dynamic>{};
+    if (targetValue != null) body['targetValue'] = targetValue;
+    if (currentValue != null) body['currentValue'] = currentValue;
+    if (weight != null) body['weight'] = weight;
+    if (isActive != null) body['isActive'] = isActive;
+    return await _put('/api/kpi/team-kpi/$kpiId', body);
+  }
+
+  /// Delete a team KPI
+  Future<bool> deleteTeamKpi(String kpiId) async {
+    try {
+      await _delete('/api/kpi/team-kpi/$kpiId');
+      return true;
+    } catch (e) {
+      print('Error deleting KPI: $e');
+      return false;
+    }
+  }
+
+  // ==================== AUDIT LOGS ====================
+
+  /// Get audit logs (admin only)
+  Future<Map<String, dynamic>> getAuditLogs({
+    int page = 0,
+    int size = 50,
+    String? entityType,
+  }) async {
+    String endpoint = '/api/audit/logs?page=$page&size=$size';
+    if (entityType != null) endpoint += '&entityType=$entityType';
+    return await _get(endpoint);
+  }
+
+  /// Get audit logs for a specific entity
+  Future<Map<String, dynamic>> getEntityAuditLogs(
+      String entityType, String entityId) async {
+    return await _get('/api/audit/logs/$entityType/$entityId');
+  }
+
+  // ==================== HELPER METHODS ====================
+
+  String _getCurrentQuarter() {
+    final month = DateTime.now().month;
+    if (month <= 3) return 'Q1';
+    if (month <= 6) return 'Q2';
+    if (month <= 9) return 'Q3';
+    return 'Q4';
   }
 }
