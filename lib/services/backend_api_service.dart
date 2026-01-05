@@ -924,6 +924,7 @@ class BackendApiService {
     String? photoUrl,
     String? deviceInfo,
     String? note,
+    bool isRemote = false,
   }) async {
     try {
       final result = await _post(
@@ -936,6 +937,7 @@ class BackendApiService {
             if (photoUrl != null) 'photoUrl': photoUrl,
             if (deviceInfo != null) 'deviceInfo': deviceInfo,
             if (note != null) 'note': note,
+            'isRemote': isRemote,
           },
           auth: true);
       return Map<String, dynamic>.from(result);
@@ -997,6 +999,88 @@ class BackendApiService {
     } catch (e) {
       print('Error fetching office locations: $e');
       return [];
+    }
+  }
+
+  // ==================== REFERENCE FACE ====================
+
+  /// Get registered reference face for current user
+  Future<Map<String, dynamic>?> getReferenceFace() async {
+    try {
+      final result = await _get('/attendance/reference-face', auth: true);
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      print('Error fetching reference face: $e');
+      return null;
+    }
+  }
+
+  /// Register or update reference face
+  Future<Map<String, dynamic>?> registerReferenceFace({
+    required String photoUrl,
+  }) async {
+    try {
+      final result = await _post(
+        '/attendance/reference-face',
+        {'photo_url': photoUrl},
+        auth: true,
+      );
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      print('Error registering reference face: $e');
+      return null;
+    }
+  }
+
+  /// Compare check-in photo with reference face (backend would use ML)
+  Future<Map<String, dynamic>?> compareFaces({
+    required String checkInPhotoUrl,
+  }) async {
+    try {
+      final result = await _post(
+        '/attendance/compare-faces',
+        {'check_in_photo_url': checkInPhotoUrl},
+        auth: true,
+      );
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      print('Error comparing faces: $e');
+      return null;
+    }
+  }
+
+  // ==================== PULSE SURVEYS ====================
+
+  /// Get current pulse survey (if any)
+  Future<Map<String, dynamic>?> getCurrentPulseSurvey() async {
+    try {
+      final result = await _get('/surveys/pulse/current', auth: true);
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      print('Error fetching pulse survey: $e');
+      return null;
+    }
+  }
+
+  /// Submit pulse survey response
+  Future<bool> submitPulseSurveyResponse({
+    required String surveyId,
+    required int rating, // 1-5
+    String? comment,
+  }) async {
+    try {
+      await _post(
+        '/surveys/pulse/$surveyId/respond',
+        {
+          'rating': rating,
+          if (comment != null) 'comment': comment,
+        },
+        auth: true,
+      );
+      return true;
+    } catch (e) {
+      print('Error submitting pulse survey: $e');
+      return false;
     }
   }
 

@@ -1,11 +1,13 @@
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
+import 'package:schoolable/services/cache_service.dart';
 import 'package:schoolable/ui/views/tasks/task_model.dart';
 import 'dart:async';
 
 class TasksViewModel extends BaseViewModel {
   final _backendService = locator<BackendApiService>();
+  final _cacheService = locator<CacheService>();
 
   List<Task> _allTasks = [];
 
@@ -40,11 +42,32 @@ class TasksViewModel extends BaseViewModel {
 
   Timer? _timer;
 
-  void initialize() {
-    fetchTasks();
-    // Polling every 30 seconds since we don't have real-time
+  void initialize() async {
+    // 1. Load cached tasks first for instant display
+    await _loadCachedTasks();
+
+    // 2. Fetch fresh tasks in background
+    await fetchTasks();
+
+    // 3. Polling every 30 seconds since we don't have real-time
     _timer =
         Timer.periodic(const Duration(seconds: 30), (timer) => fetchTasks());
+  }
+
+  /// Load cached tasks for instant display
+  Future<void> _loadCachedTasks() async {
+    try {
+      final cached = await _cacheService.getCachedTasks();
+      if (cached != null && cached.isNotEmpty) {
+        _allTasks = cached
+            .cast<Map<String, dynamic>>()
+            .map((e) => Task.fromMap(e))
+            .toList();
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error loading cached tasks: $e');
+    }
   }
 
   @override
@@ -58,6 +81,9 @@ class TasksViewModel extends BaseViewModel {
     try {
       final data = await _backendService.getTasks();
       _allTasks = data.map((e) => Task.fromMap(e)).toList();
+
+      // Cache the tasks for future use
+      await _cacheService.cacheTasks(data);
     } catch (e) {
       print('Error fetching tasks: $e');
     } finally {

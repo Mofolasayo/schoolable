@@ -45,5 +45,25 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	
+	<!-- Camera and Photo Library Permissions -->
+	<key>NSCameraUsageDescription</key>
+	<string>Schoolable needs access to your camera to take a selfie for daily check-in verification.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Schoolable needs access to your photo library to save check-in photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Schoolable needs permission to save check-in photos to your library.</string>
+	
+	<!-- Location Permissions -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Schoolable needs your location to verify your check-in location for attendance tracking.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Schoolable uses your location to verify attendance check-in and ensure you are at the designated work location.</string>
+	
+	<!-- Microphone Permission (for speech-to-text if used) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Schoolable needs access to your microphone for voice input and communication features.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Schoolable uses speech recognition to help you with voice input.</string>
 </dict>
 </plist>

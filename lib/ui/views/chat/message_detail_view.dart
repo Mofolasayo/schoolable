@@ -5,11 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
+import 'package:schoolable/services/cache_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/common/widgets/app_avatar.dart';
 
 class MessageDetailViewModel extends BaseViewModel {
   final BackendApiService _backendService = locator<BackendApiService>();
+  final CacheService _cacheService = locator<CacheService>();
 
   final String channelId;
   final String name;
@@ -38,13 +40,17 @@ class MessageDetailViewModel extends BaseViewModel {
   final TextEditingController messageController = TextEditingController();
   bool get canSendMessage => messageController.text.trim().isNotEmpty;
 
-  void initialize() {
+  void initialize() async {
     setBusy(true);
 
-    // Mark as read immediately when opening
-    _markAsRead();
+    // 1. Load cached messages immediately for instant display
+    await _loadCachedMessages();
 
-    fetchMessages();
+    // 2. Mark as read immediately when opening
+    await _sendReadReceipt();
+
+    // 3. Fetch fresh messages in background
+    await fetchMessages();
 
     if (isChannel) {
       fetchMembers();
@@ -57,14 +63,30 @@ class MessageDetailViewModel extends BaseViewModel {
       );
     }
 
-    // Polling every 3 seconds for new messages (faster for chat)
+    // 4. Polling every 3 seconds for new messages (faster for chat)
     _timer = Timer.periodic(const Duration(seconds: 3), (_) => fetchMessages());
 
     messageController.addListener(notifyListeners);
+    setBusy(false);
   }
 
-  Future<void> _markAsRead() async {
-    await _backendService.markChannelAsRead(channelId);
+  /// Load cached messages for instant display
+  Future<void> _loadCachedMessages() async {
+    final cached = await _cacheService.getCachedMessages(channelId);
+    if (cached != null && cached.isNotEmpty) {
+      _messages = cached.cast<Map<String, dynamic>>();
+      notifyListeners();
+    }
+  }
+
+  /// Send read receipt to server
+  Future<void> _sendReadReceipt() async {
+    try {
+      await _backendService.markChannelAsRead(channelId);
+      print('✅ Read receipt sent for channel: $channelId');
+    } catch (e) {
+      print('⚠️ Failed to send read receipt: $e');
+    }
   }
 
   Future<void> _checkOnlineStatus() async {
@@ -83,11 +105,13 @@ class MessageDetailViewModel extends BaseViewModel {
     final previousCount = _messages.length;
     final msgs = await _backendService.getMessages(channelId);
     _messages = msgs;
-    setBusy(false);
 
-    // If we have new messages, mark as read
+    // Cache messages for offline access
+    await _cacheService.cacheMessages(channelId, msgs);
+
+    // If we have new messages, send read receipt
     if (msgs.length > previousCount) {
-      _markAsRead();
+      await _sendReadReceipt();
     }
 
     notifyListeners();
@@ -98,8 +122,34 @@ class MessageDetailViewModel extends BaseViewModel {
     if (text.isEmpty) return;
 
     messageController.clear();
-    await _backendService.sendMessage(channelId, text);
-    // Refresh messages after sending
+
+    // Optimistic update: Add message to local state immediately
+    final optimisticMessage = {
+      'id': 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      'content': text,
+      'user_id': _backendService.currentUserId,
+      'created_at': DateTime.now().toIso8601String(),
+      'sending': true, // Mark as pending
+    };
+    _messages = [optimisticMessage, ..._messages];
+    notifyListeners();
+
+    // Also add to cache for persistence
+    await _cacheService.addMessageToCache(channelId, optimisticMessage);
+
+    // Send to server
+    final result = await _backendService.sendMessage(channelId, text);
+
+    if (result != null) {
+      // Replace optimistic message with real one
+      _messages.removeWhere((m) => m['id'] == optimisticMessage['id']);
+      _messages = [result, ..._messages];
+
+      // Update cache with real message
+      await _cacheService.cacheMessages(channelId, _messages);
+    }
+
+    // Refresh messages to ensure sync
     await fetchMessages();
   }
 
@@ -298,14 +348,25 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
                                     ),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    _formatTime(timestamp),
-                                    style: TextStyle(
-                                      color: isMe
-                                          ? Colors.white.withValues(alpha: 0.7)
-                                          : kcTextMutedColor,
-                                      fontSize: 10,
-                                    ),
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _formatTime(timestamp),
+                                        style: TextStyle(
+                                          color: isMe
+                                              ? Colors.white
+                                                  .withValues(alpha: 0.7)
+                                              : kcTextMutedColor,
+                                          fontSize: 10,
+                                        ),
+                                      ),
+                                      // Read receipt indicators for sent messages
+                                      if (isMe) ...[
+                                        const SizedBox(width: 4),
+                                        _buildReadReceiptIndicator(message),
+                                      ],
+                                    ],
                                   ),
                                 ],
                               ),
@@ -484,6 +545,52 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
         ),
       ),
     );
+  }
+
+  /// Build read receipt indicator (checkmarks) for sent messages
+  /// - Single gray check: Message sent
+  /// - Double gray checks: Message delivered
+  /// - Double blue checks: Message read
+  Widget _buildReadReceiptIndicator(Map<String, dynamic> message) {
+    final isSending = message['sending'] == true;
+    final isRead = message['read_at'] != null || message['is_read'] == true;
+    final isDelivered =
+        message['id'] != null && !message['id'].toString().startsWith('temp_');
+
+    if (isSending) {
+      // Still sending - show clock icon
+      return Icon(
+        Icons.access_time,
+        size: 12,
+        color: Colors.white.withValues(alpha: 0.6),
+      );
+    } else if (isRead) {
+      // Read - double blue checks
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.done_all,
+            size: 14,
+            color: Colors.lightBlueAccent.shade100,
+          ),
+        ],
+      );
+    } else if (isDelivered) {
+      // Delivered - double gray checks
+      return Icon(
+        Icons.done_all,
+        size: 14,
+        color: Colors.white.withValues(alpha: 0.7),
+      );
+    } else {
+      // Sent - single check
+      return Icon(
+        Icons.done,
+        size: 14,
+        color: Colors.white.withValues(alpha: 0.7),
+      );
+    }
   }
 
   String _formatTime(String? timestamp) {

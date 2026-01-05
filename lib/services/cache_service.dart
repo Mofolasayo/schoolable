@@ -194,4 +194,68 @@ class CacheService {
       await set(keyAttendanceToday, attendance);
     }
   }
+
+  // ============ Message Caching for Offline Support ============
+
+  /// Cache key for messages in a specific channel
+  String _getMessagesKey(String channelId) => 'cache_messages_$channelId';
+
+  /// Get cached messages for a channel
+  Future<List<dynamic>?> getCachedMessages(String channelId) async {
+    return await get<List<dynamic>>(_getMessagesKey(channelId));
+  }
+
+  /// Cache messages for a channel
+  Future<void> cacheMessages(String channelId, List<dynamic> messages) async {
+    // Only keep the last 100 messages to avoid storage bloat
+    final toCache = messages.length > 100 ? messages.sublist(0, 100) : messages;
+    await set(_getMessagesKey(channelId), toCache);
+  }
+
+  /// Add a message to the cache (for optimistic UI updates)
+  Future<void> addMessageToCache(
+      String channelId, Map<String, dynamic> message) async {
+    final existing = await getCachedMessages(channelId) ?? [];
+    final messages = [message, ...existing.cast<Map<String, dynamic>>()];
+    await cacheMessages(channelId, messages);
+  }
+
+  // ============ Home Page Data Caching ============
+
+  static const String keyHomeStats = 'cache_home_stats';
+  static const String keyAuraScore = 'cache_aura_score';
+
+  /// Get cached home stats
+  Future<Map<String, dynamic>?> getCachedHomeStats() async {
+    return await get<Map<String, dynamic>>(keyHomeStats);
+  }
+
+  /// Cache home stats
+  Future<void> cacheHomeStats(Map<String, dynamic> stats) async {
+    await set(keyHomeStats, stats);
+  }
+
+  /// Get cached AURA score
+  Future<Map<String, dynamic>?> getCachedAuraScore() async {
+    return await get<Map<String, dynamic>>(keyAuraScore);
+  }
+
+  /// Cache AURA score
+  Future<void> cacheAuraScore(Map<String, dynamic> aura) async {
+    await set(keyAuraScore, aura);
+  }
+
+  // ============ Reference Face Caching ============
+
+  static const String keyReferenceFace = 'cache_reference_face';
+
+  /// Get cached reference face
+  Future<Map<String, dynamic>?> getCachedReferenceFace() async {
+    return await get<Map<String, dynamic>>(keyReferenceFace);
+  }
+
+  /// Cache reference face
+  Future<void> cacheReferenceFace(Map<String, dynamic> faceData) async {
+    await set(keyReferenceFace, faceData);
+  }
 }
