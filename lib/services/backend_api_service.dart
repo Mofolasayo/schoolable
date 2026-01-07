@@ -1965,6 +1965,91 @@ class BackendApiService {
     return await _get('/api/audit/logs/$entityType/$entityId');
   }
 
+  // ==================== DAILY REPORTS ====================
+
+  /// Get my daily reports
+  Future<List<dynamic>> getMyReports({int? limit}) async {
+    String endpoint = '/api/daily-reports/my';
+    if (limit != null) endpoint += '?limit=$limit';
+    final response = await _get(endpoint);
+    return response is List ? response : [];
+  }
+
+  /// Get today's report status
+  Future<Map<String, dynamic>> getTodayReport() async {
+    return await _get('/api/daily-reports/today');
+  }
+
+  /// Submit a daily report
+  Future<Map<String, dynamic>> submitDailyReport({
+    required String tasksCompleted,
+    String? tasksInProgress,
+    String? blockers,
+    String? plannedForTomorrow,
+    String? additionalNotes,
+    String? attachmentUrl,
+    String? attachmentName,
+    DateTime? reportDate,
+  }) async {
+    return await _post(
+        '/api/daily-reports',
+        {
+          'tasksCompleted': tasksCompleted,
+          if (tasksInProgress != null) 'tasksInProgress': tasksInProgress,
+          if (blockers != null) 'blockers': blockers,
+          if (plannedForTomorrow != null)
+            'plannedForTomorrow': plannedForTomorrow,
+          if (additionalNotes != null) 'additionalNotes': additionalNotes,
+          if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
+          if (attachmentName != null) 'attachmentName': attachmentName,
+          if (reportDate != null)
+            'reportDate': reportDate.toIso8601String().split('T')[0],
+        },
+        auth: true);
+  }
+
+  /// Update today's daily report
+  Future<Map<String, dynamic>> updateDailyReport({
+    required int reportId,
+    String? tasksCompleted,
+    String? tasksInProgress,
+    String? blockers,
+    String? plannedForTomorrow,
+    String? additionalNotes,
+    String? attachmentUrl,
+    String? attachmentName,
+  }) async {
+    return await _put('/api/daily-reports/$reportId', {
+      if (tasksCompleted != null) 'tasksCompleted': tasksCompleted,
+      if (tasksInProgress != null) 'tasksInProgress': tasksInProgress,
+      if (blockers != null) 'blockers': blockers,
+      if (plannedForTomorrow != null) 'plannedForTomorrow': plannedForTomorrow,
+      if (additionalNotes != null) 'additionalNotes': additionalNotes,
+      if (attachmentUrl != null) 'attachmentUrl': attachmentUrl,
+      if (attachmentName != null) 'attachmentName': attachmentName,
+    });
+  }
+
+  /// Get my daily report stats
+  Future<Map<String, dynamic>> getDailyReportStats() async {
+    return await _get('/api/daily-reports/stats');
+  }
+
+  // ==================== INDIVIDUAL KPIS ====================
+
+  /// Get my individual KPIs
+  Future<Map<String, dynamic>> getMyIndividualKpis({
+    String? quarter,
+    int? year,
+  }) async {
+    String endpoint = '/api/individual-kpis/my';
+    List<String> params = [];
+    if (quarter != null) params.add('quarter=$quarter');
+    if (year != null) params.add('year=$year');
+    if (params.isNotEmpty) endpoint += '?${params.join('&')}';
+    return await _get(endpoint);
+  }
+
   // ==================== HELPER METHODS ====================
 
   String _getCurrentQuarter() {

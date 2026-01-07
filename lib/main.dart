@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:schoolable/app/app.bottomsheets.dart';
 import 'package:schoolable/app/app.dialogs.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/app/app.router.dart';
+import 'package:schoolable/services/notification_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:stacked_services/stacked_services.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +19,30 @@ Future<void> main() async {
   await setupLocator();
   setupDialogUi();
   setupBottomSheetUi();
+
+  // Initialize Firebase for FCM/local notifications if configured
+  final firebaseOptions = DefaultFirebaseOptions.currentPlatform;
+  final hasRealFirebaseConfig = ![
+    firebaseOptions.apiKey,
+    firebaseOptions.appId,
+    firebaseOptions.messagingSenderId,
+    firebaseOptions.projectId,
+  ].any((value) => value.contains('REPLACE_ME'));
+
+  if (hasRealFirebaseConfig) {
+    await Firebase.initializeApp(
+      options: firebaseOptions,
+    );
+    // Warm up notification service (permission prompt handled inside)
+    await NotificationService().initialize();
+  } else {
+    // Skip Firebase init to avoid runtime errors until config is provided
+    // ignore: avoid_print
+    print(
+      '⚠️ Firebase not configured. Run flutterfire configure and update lib/firebase_options.dart, android/app/google-services.json, and ios/Runner/GoogleService-Info.plist',
+    );
+  }
+
   runApp(const MainApp());
 }
 

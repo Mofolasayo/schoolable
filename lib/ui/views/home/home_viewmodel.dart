@@ -86,6 +86,7 @@ class AuraData {
     this.departmentProfile,
     this.automationRate,
     this.calculatedAt,
+    this.scoreChange, // Daily score change from previous day
   });
 
   final double auraScore;
@@ -98,6 +99,7 @@ class AuraData {
   final String? departmentProfile; // e.g., "Engineering", "Sales"
   final double? automationRate; // e.g., 80.0 for 80% automated
   final String? calculatedAt;
+  final double? scoreChange; // Change from previous day (e.g., +2.5 or -1.3)
 
   factory AuraData.fromMap(Map<String, dynamic> map) {
     final pillarsMap = map['pillars'] as Map<String, dynamic>? ?? {};
@@ -120,6 +122,7 @@ class AuraData {
       departmentProfile: map['departmentProfile']?.toString(),
       automationRate: (map['automationRate'] as num?)?.toDouble(),
       calculatedAt: map['calculatedAt']?.toString(),
+      scoreChange: (map['scoreChange'] as num?)?.toDouble(),
     );
   }
 }
@@ -358,12 +361,18 @@ class HomeViewModel extends IndexTrackingViewModel {
             message.data['notificationType']?.toString() ?? '';
         if (notificationType.contains('task')) {
           _fetchTasks();
+          // Also refresh Aura data since task completion affects performance scores
+          _fetchAuraData();
         } else if (notificationType.contains('announcement')) {
           _fetchAnnouncements();
+        } else if (notificationType.contains('attendance')) {
+          // Attendance changes affect Aura score
+          _fetchAuraData();
         } else {
-          // Refresh both for general notifications
+          // Refresh all for general notifications
           _fetchTasks();
           _fetchAnnouncements();
+          _fetchAuraData();
         }
       });
     } catch (e) {
@@ -415,14 +424,18 @@ class HomeViewModel extends IndexTrackingViewModel {
       _loadUserProfile(),
       _fetchTasks(),
       _fetchAuraData(),
+      _fetchTeamData(),
+      _fetchComplianceItems(),
     ]);
   }
 
   /// Fetch Auto-calculated Aura performance data from backend
   /// Uses department-specific KPIs for real-time calculation
   Future<void> _fetchAuraData() async {
-    isLoadingAura = true;
-    rebuildUi();
+    if (auraData == null) {
+      isLoadingAura = true;
+      rebuildUi();
+    }
 
     try {
       // Use auto-aura endpoint for real-time calculation with department KPIs
@@ -452,8 +465,10 @@ class HomeViewModel extends IndexTrackingViewModel {
 
   /// Fetch Team Score and AI Insights from backend
   Future<void> _fetchTeamData() async {
-    isLoadingTeamData = true;
-    rebuildUi();
+    if (teamScore == null) {
+      isLoadingTeamData = true;
+      rebuildUi();
+    }
 
     try {
       // Fetch team score
@@ -570,6 +585,40 @@ class HomeViewModel extends IndexTrackingViewModel {
           weight: 25.0,
           contribution: 0.0,
           dataSource: 'auto',
+          subMetrics: [
+            SubMetricDetail(
+              key: 'task_completion_rate',
+              displayName: 'Task Completion Rate',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'on_time_delivery',
+              displayName: 'On-Time Delivery',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'task_quality',
+              displayName: 'Task Quality',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'documentation',
+              displayName: 'Documentation',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+          ],
         ),
         'behavioral': PillarDetail(
           name: 'Behavioral Competence',
@@ -577,6 +626,40 @@ class HomeViewModel extends IndexTrackingViewModel {
           weight: 25.0,
           contribution: 0.0,
           dataSource: 'mixed',
+          subMetrics: [
+            SubMetricDetail(
+              key: 'attendance_rate',
+              displayName: 'Attendance Rate',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 30.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'punctuality',
+              displayName: 'Punctuality',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'consistency',
+              displayName: 'Work Consistency',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 20.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'initiative',
+              displayName: 'Initiative',
+              score: 0.0,
+              source: 'team_lead',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+          ],
         ),
         'cultureFit': PillarDetail(
           name: 'Culture Fit',
@@ -584,6 +667,40 @@ class HomeViewModel extends IndexTrackingViewModel {
           weight: 25.0,
           contribution: 0.0,
           dataSource: 'mixed',
+          subMetrics: [
+            SubMetricDetail(
+              key: 'policy_compliance',
+              displayName: 'Policy Compliance',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 35.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'training_compliance',
+              displayName: 'Training Compliance',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 30.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'zero_violations',
+              displayName: 'Zero HR Violations',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 20.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'attitude',
+              displayName: 'Attitude',
+              score: 0.0,
+              source: 'team_lead',
+              weightInPillar: 15.0,
+              contribution: 0.0,
+            ),
+          ],
         ),
         'growthLearning': PillarDetail(
           name: 'Growth & Learning',
@@ -591,6 +708,40 @@ class HomeViewModel extends IndexTrackingViewModel {
           weight: 25.0,
           contribution: 0.0,
           dataSource: 'auto',
+          subMetrics: [
+            SubMetricDetail(
+              key: 'training_hours',
+              displayName: 'Training Participation',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'certifications',
+              displayName: 'Certifications Earned',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'improvement_trend',
+              displayName: 'Score Improvement',
+              score: 0.0,
+              source: 'auto',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+            SubMetricDetail(
+              key: 'skill_application',
+              displayName: 'Skills Applied',
+              score: 0.0,
+              source: 'team_lead',
+              weightInPillar: 25.0,
+              contribution: 0.0,
+            ),
+          ],
         ),
       },
       quarterStart: 'Awaiting data...',
@@ -695,7 +846,9 @@ class HomeViewModel extends IndexTrackingViewModel {
   }
 
   Future<void> _loadUserProfile() async {
-    setBusy(true);
+    if (userName == null) {
+      setBusy(true);
+    }
     try {
       // Fetch from API
       final profile = await _backendService.getUserProfile(forceRefresh: true);
@@ -709,7 +862,9 @@ class HomeViewModel extends IndexTrackingViewModel {
     } catch (e) {
       print('Error loading profile: $e');
     } finally {
-      setBusy(false);
+      if (userName == null) {
+        setBusy(false);
+      }
     }
   }
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'attendance_viewmodel.dart';
+import 'attendance_history_view.dart';
 
 class AttendanceView extends StackedView<AttendanceViewModel> {
   const AttendanceView({Key? key}) : super(key: key);
@@ -715,7 +716,11 @@ class AttendanceView extends StackedView<AttendanceViewModel> {
             Center(
               child: TextButton(
                 onPressed: () {
-                  // TODO: Navigate to full history page
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const AttendanceHistoryView(),
+                    ),
+                  );
                 },
                 child: const Text(
                   'View full history',
@@ -887,7 +892,8 @@ class AttendanceView extends StackedView<AttendanceViewModel> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: Text(
-                          record.location ?? record.address ?? '',
+                          // Priority: Address -> Location -> Empty
+                          record.address ?? record.location ?? '',
                           style: const TextStyle(
                             color: kcTextMutedColor,
                             fontSize: 11,

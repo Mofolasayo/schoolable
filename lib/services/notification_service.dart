@@ -4,7 +4,10 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
+import 'package:schoolable/ui/views/home/home_view.dart';
+import 'package:stacked_services/stacked_services.dart';
 
 /// Background message handler (must be top-level function)
 @pragma('vm:entry-point')
@@ -23,6 +26,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
   final BackendApiService _apiService = BackendApiService();
+  final NavigationService _nav = locator<NavigationService>();
 
   bool _isInitialized = false;
   String? _fcmToken;
@@ -33,6 +37,11 @@ class NotificationService {
   /// Initialize the notification service
   Future<void> initialize() async {
     if (_isInitialized) return;
+
+    if (Firebase.apps.isEmpty) {
+      debugPrint('⚠️ Firebase not initialized; skipping notification setup.');
+      return;
+    }
 
     // Set up background message handler
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
@@ -53,7 +62,11 @@ class NotificationService {
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
       await _setupLocalNotifications();
-      await _setupFCM();
+      try {
+        await _setupFCM();
+      } catch (e) {
+        debugPrint('❌ FCM setup failed: $e');
+      }
       _isInitialized = true;
     }
   }
@@ -98,20 +111,42 @@ class NotificationService {
 
   /// Set up Firebase Cloud Messaging
   Future<void> _setupFCM() async {
-    // Get FCM token
-    _fcmToken = await _messaging.getToken();
-    debugPrint('📱 FCM Token: $_fcmToken');
+    // Ensure auto-init is on
+    await _messaging.setAutoInitEnabled(true);
 
-    // Register token with backend
-    if (_fcmToken != null) {
-      await _registerTokenWithBackend(_fcmToken!);
-    }
-
-    // Listen for token refresh
+    // Listen for token refresh early so we catch the first token when APNs is ready
     _messaging.onTokenRefresh.listen((newToken) async {
       _fcmToken = newToken;
       await _registerTokenWithBackend(newToken);
     });
+
+    // On iOS, APNs token might not be ready immediately; try to fetch it for logging
+    if (Platform.isIOS) {
+      try {
+        final apns = await _messaging.getAPNSToken();
+        debugPrint('📱 APNs token: $apns');
+      } catch (e) {
+        debugPrint('⚠️ Could not fetch APNs token yet: $e');
+      }
+    }
+
+    // Get FCM token (may throw if APNs token not ready on iOS)
+    try {
+      _fcmToken = await _messaging.getToken();
+      debugPrint('📱 FCM Token: $_fcmToken');
+
+      if (_fcmToken != null) {
+        await _registerTokenWithBackend(_fcmToken!);
+      }
+    } catch (e) {
+      final message = e.toString();
+      if (Platform.isIOS && message.contains('apns-token-not-set')) {
+        debugPrint(
+            '⚠️ APNs token not set yet; will register when available via onTokenRefresh.');
+      } else {
+        rethrow;
+      }
+    }
 
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
@@ -156,29 +191,7 @@ class NotificationService {
   void _handleNotificationOpen(RemoteMessage message) {
     debugPrint('📥 Notification opened: ${message.data}');
 
-    // Handle navigation based on message data
-    String? action = message.data['action'];
-    String? taskId = message.data['taskId'];
-    String? announcementId = message.data['announcementId'];
-
-    // TODO: Use navigation service to navigate to appropriate screen
-    // This would typically use a navigation service or app router
-    if (action == 'open_task' && taskId != null) {
-      // Navigate to task detail
-      debugPrint('Navigate to task: $taskId');
-    } else if (action == 'open_announcement' && announcementId != null) {
-      // Navigate to announcement
-      debugPrint('Navigate to announcement: $announcementId');
-    } else if (action == 'open_chat') {
-      // Navigate to chat
-      debugPrint('Navigate to chat');
-    } else if (action == 'open_peer_rating') {
-      // Navigate to peer rating
-      debugPrint('Navigate to peer rating');
-    } else if (action == 'rate_task' && taskId != null) {
-      // Navigate to rate task
-      debugPrint('Navigate to rate task: $taskId');
-    }
+    _navigateFromPayload(message.data);
   }
 
   /// Handle local notification tap
@@ -188,14 +201,42 @@ class NotificationService {
     if (response.payload != null) {
       try {
         Map<String, dynamic> data = jsonDecode(response.payload!);
-        // Handle navigation based on payload
-        String? action = data['action'];
-        if (action != null) {
-          // TODO: Navigate based on action
-        }
+        _navigateFromPayload(data);
       } catch (e) {
         debugPrint('Failed to parse notification payload: $e');
       }
+    }
+  }
+
+  /// Centralized navigation handler for notification payloads
+  void _navigateFromPayload(Map<String, dynamic> data) {
+    final action = data['action']?.toString();
+    final taskId =
+        data['taskId']?.toString() ?? data['task_id']?.toString();
+    final announcementId = data['announcementId']?.toString() ??
+        data['announcement_id']?.toString();
+    final channelId =
+        data['channelId']?.toString() ?? data['channel_id']?.toString();
+
+    // Lightweight routing to relevant tabs; extend with deep links when routes exist
+    if (action == 'open_task' && taskId != null) {
+      _nav.navigateToView(const HomeView(initialTab: 1));
+      debugPrint('🔀 Routing to Tasks tab for task $taskId');
+    } else if (action == 'open_announcement' && announcementId != null) {
+      _nav.navigateToView(const HomeView(initialTab: 0));
+      debugPrint('🔀 Routing to Home tab for announcement $announcementId');
+    } else if (action == 'open_chat' && channelId != null) {
+      _nav.navigateToView(const HomeView(initialTab: 3));
+      debugPrint('🔀 Routing to Chat tab for channel $channelId');
+    } else if (action == 'open_peer_rating') {
+      _nav.navigateToView(const HomeView(initialTab: 0));
+      debugPrint('🔀 Routing to Home tab for peer rating');
+    } else if (action == 'rate_task' && taskId != null) {
+      _nav.navigateToView(const HomeView(initialTab: 1));
+      debugPrint('🔀 Routing to Tasks tab to rate task $taskId');
+    } else {
+      _nav.navigateToView(const HomeView(initialTab: 0));
+      debugPrint('🔀 Routing to Home tab (default)');
     }
   }
 

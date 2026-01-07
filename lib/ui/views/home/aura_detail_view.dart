@@ -217,7 +217,43 @@ class _AuraDetailViewState extends State<AuraDetailView> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
+          // Daily Score Change Indicator
+          if (auraData.scoreChange != null && auraData.scoreChange != 0) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                color: auraData.scoreChange! > 0
+                    ? kcTealColor.withOpacity(0.1)
+                    : kcRoseColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    auraData.scoreChange! > 0
+                        ? Icons.trending_up
+                        : Icons.trending_down,
+                    size: 16,
+                    color:
+                        auraData.scoreChange! > 0 ? kcTealColor : kcRoseColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${auraData.scoreChange! > 0 ? '+' : ''}${auraData.scoreChange!.toStringAsFixed(1)} today',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color:
+                          auraData.scoreChange! > 0 ? kcTealColor : kcRoseColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           // Grade & QGPA Badges
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -712,15 +748,84 @@ class _AuraDetailViewState extends State<AuraDetailView> {
           ),
           const SizedBox(height: 20),
           _buildInfoItem(
-              'Technical', 'Based on your task completion & quality'),
+            'Technical (35%)',
+            'Daily reports, task completion, individual KPIs',
+          ),
           _buildInfoItem(
-              'Behavioral', 'Work ethic & professionalism (Team Lead rated)'),
-          _buildInfoItem('Culture Fit', 'Values alignment and collaboration'),
-          _buildInfoItem('Growth', 'Learning initiatives and certifications'),
+            'Behavioral (25%)',
+            'Attendance, punctuality, work consistency',
+          ),
+          _buildInfoItem(
+            'Culture Fit (20%)',
+            'Policy compliance, values alignment',
+          ),
+          _buildInfoItem(
+            'Growth (20%)',
+            'Training, certifications, improvement trend',
+          ),
           const SizedBox(height: 16),
           Divider(color: kcBorderColor.withOpacity(0.5)),
           const SizedBox(height: 16),
-          if (auraData.quarterStart != null)
+          // Automation indicator
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: kcTealColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.auto_awesome,
+                  size: 16,
+                  color: kcTealColor,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '~80% of your score is calculated automatically from your daily activities',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: kcTealColor,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          // Update frequency
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Score updates',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: kcTextMutedColor,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: kcPrimaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Daily at 11:59 PM',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: kcPrimaryColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (auraData.quarterStart != null) ...[
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -742,6 +847,7 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                 ),
               ],
             ),
+          ],
         ],
       ),
     );

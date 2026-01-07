@@ -4,12 +4,14 @@ import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/app/app.router.dart';
 import 'package:stacked_services/stacked_services.dart';
 import 'package:schoolable/services/backend_api_service.dart';
+import 'package:schoolable/services/notification_service.dart';
 
 class LoginViewModel extends BaseViewModel {
   final _nav = locator<NavigationService>();
 
   final _backend = locator<BackendApiService>();
   final _dialogService = locator<DialogService>();
+  final _notificationService = NotificationService();
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -70,6 +72,7 @@ class LoginViewModel extends BaseViewModel {
         // Profile is complete, go Home
         print(
             '✅ Profile complete (completed at: ${completionStatus['profile_completed_at']}). Going to HomeView.');
+        await _notificationService.initialize();
         _nav.replaceWithHomeView();
       }
     } catch (e) {

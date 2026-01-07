@@ -3,10 +3,12 @@ import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/app/app.router.dart';
 import 'package:stacked_services/stacked_services.dart';
 import 'package:schoolable/services/backend_api_service.dart';
+import 'package:schoolable/services/notification_service.dart';
 
 class StartupViewModel extends BaseViewModel {
   final _navigationService = locator<NavigationService>();
   final _backend = locator<BackendApiService>();
+  final _notificationService = NotificationService();
 
   // Place anything here that needs to happen before we get into the application
   Future runStartupLogic() async {
@@ -38,6 +40,7 @@ class StartupViewModel extends BaseViewModel {
           } else {
             // Profile complete, navigate to home
             print('✅ Profile complete. Going to HomeView.');
+            await _notificationService.initialize();
             _navigationService.replaceWithHomeView();
           }
           return;

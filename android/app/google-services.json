@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "430702711255",
+    "project_id": "spotify-clone-4d0ba",
+    "storage_bucket": "spotify-clone-4d0ba.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:430702711255:android:c993fe580a218d7c1bbb92",
+        "android_client_info": {
+          "package_name": "com.schoolable.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAv29GwCzFypAHRFfD6Zx3h6TpZMwtxpqA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

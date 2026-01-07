@@ -4,7 +4,7 @@ import 'package:stacked/stacked.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/tasks/tasks_view.dart';
 import 'package:schoolable/ui/views/attendance/attendance_view.dart';
-import 'package:schoolable/ui/views/chat/chat_view.dart';
+import 'package:schoolable/ui/views/reports/reports_view.dart';
 import 'package:schoolable/ui/views/profile/profile_view.dart';
 import 'package:schoolable/ui/views/tasks/task_detail_view.dart';
 import 'package:schoolable/ui/views/home/announcements_view.dart';
@@ -19,7 +19,9 @@ import 'package:schoolable/ui/views/tasks/task_rating_modal.dart';
 import 'home_viewmodel.dart';
 
 class HomeView extends StackedView<HomeViewModel> {
-  const HomeView({Key? key}) : super(key: key);
+  const HomeView({Key? key, this.initialTab = 0}) : super(key: key);
+
+  final int initialTab;
 
   @override
   Widget builder(BuildContext context, HomeViewModel viewModel, Widget? child) {
@@ -59,8 +61,8 @@ class HomeView extends StackedView<HomeViewModel> {
               label: 'Check-in',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.chat_bubble_rounded),
-              label: 'Chat',
+              icon: Icon(Icons.description_rounded),
+              label: 'Reports',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.person_rounded),
@@ -81,7 +83,7 @@ class HomeView extends StackedView<HomeViewModel> {
       case 2:
         return const AttendanceView();
       case 3:
-        return const ChatView();
+        return const ReportsView();
       case 4:
         // Pass cached profile data to avoid flickering
         return ProfileView(userProfile: {
@@ -100,6 +102,11 @@ class HomeView extends StackedView<HomeViewModel> {
 
   @override
   HomeViewModel viewModelBuilder(BuildContext context) => HomeViewModel();
+
+  @override
+  void onViewModelReady(HomeViewModel viewModel) {
+    viewModel.setTab(initialTab);
+  }
 }
 
 class _HomeContent extends ViewModelWidget<HomeViewModel> {

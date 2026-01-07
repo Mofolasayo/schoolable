@@ -298,78 +298,88 @@ class MessageDetailView extends StackedView<MessageDetailViewModel> {
                             alignment: isMe
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 12,
-                              ),
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width * 0.75,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isMe ? kcPrimaryColor : Colors.white,
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft: Radius.circular(isMe ? 16 : 4),
-                                  bottomRight: Radius.circular(isMe ? 4 : 16),
-                                ),
-                                boxShadow: [
-                                  if (!isMe)
-                                    BoxShadow(
-                                      color:
-                                          Colors.black.withValues(alpha: 0.05),
-                                      blurRadius: 5,
-                                      offset: const Offset(0, 2),
-                                    ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (!isMe && isChannel) ...[
-                                    Text(
-                                        message['sender']?['full_name'] ??
-                                            'Unknown',
-                                        style: const TextStyle(
-                                          color: kcPrimaryColor,
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                        )),
-                                    const SizedBox(height: 4),
-                                  ],
-                                  Text(
-                                    content,
-                                    style: TextStyle(
-                                      color: isMe ? Colors.white : kcTextColor,
-                                      fontSize: 14,
-                                    ),
+                            child: Column(
+                              crossAxisAlignment: isMe
+                                  ? CrossAxisAlignment.end
+                                  : CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  margin: const EdgeInsets.only(bottom: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Row(
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width *
+                                            0.75,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isMe ? kcPrimaryColor : Colors.white,
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: const Radius.circular(16),
+                                      topRight: const Radius.circular(16),
+                                      bottomLeft:
+                                          Radius.circular(isMe ? 16 : 4),
+                                      bottomRight:
+                                          Radius.circular(isMe ? 4 : 16),
+                                    ),
+                                    boxShadow: [
+                                      if (!isMe)
+                                        BoxShadow(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.05),
+                                          blurRadius: 5,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                    ],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      if (!isMe && isChannel) ...[
+                                        Text(
+                                            message['sender']?['full_name'] ??
+                                                'Unknown',
+                                            style: const TextStyle(
+                                              color: kcPrimaryColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold,
+                                            )),
+                                        const SizedBox(height: 4),
+                                      ],
+                                      Text(
+                                        content,
+                                        style: TextStyle(
+                                          color:
+                                              isMe ? Colors.white : kcTextColor,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
                                         _formatTime(timestamp),
-                                        style: TextStyle(
-                                          color: isMe
-                                              ? Colors.white
-                                                  .withValues(alpha: 0.7)
-                                              : kcTextMutedColor,
+                                        style: const TextStyle(
+                                          color: kcTextMutedColor,
                                           fontSize: 10,
                                         ),
                                       ),
-                                      // Read receipt indicators for sent messages
                                       if (isMe) ...[
                                         const SizedBox(width: 4),
                                         _buildReadReceiptIndicator(message),
                                       ],
                                     ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           );
                         },
