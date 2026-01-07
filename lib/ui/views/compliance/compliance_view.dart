@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+import 'package:schoolable/app/app.locator.dart';
+import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/home/home_viewmodel.dart';
 import 'package:schoolable/ui/views/compliance/compliance_submission_view.dart';
@@ -420,43 +422,40 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
 
 /// ViewModel for Compliance View
 class ComplianceViewModel extends BaseViewModel {
+  final _backendService = locator<BackendApiService>();
+
   List<ComplianceItem> _complianceItems = [];
   List<ComplianceItem> get complianceItems => _complianceItems;
 
   Future<void> fetchComplianceItems() async {
     setBusy(true);
     try {
-      // For now, using mock data similar to HomeViewModel
-      // In production, this would call _backendService.getComplianceItems()
-      _complianceItems = [
-        ComplianceItem(
-          id: '1',
-          title: 'IT Security Policy',
-          description:
-              'Review and acknowledge the updated IT security policy for 2024.',
-          type: 'policy',
-          status: 'pending',
-          deadline: DateTime.now().add(const Duration(days: 7)),
-        ),
-        ComplianceItem(
-          id: '2',
-          title: 'Submit Tax Identification',
-          description: 'Upload your valid tax ID document for payroll records.',
-          type: 'upload',
-          status: 'pending',
-          deadline: DateTime.now().add(const Duration(days: 14)),
-        ),
-        ComplianceItem(
-          id: '3',
-          title: 'Code of Conduct',
-          description: 'Annual acknowledgement of the company code of conduct.',
-          type: 'policy',
-          status: 'complied',
-          deadline: DateTime.now().subtract(const Duration(days: 30)),
-        ),
-      ];
+      final items = await _backendService.getMyComplianceItems();
+
+      _complianceItems = items.map((item) {
+        // Parse date from string if needed
+        DateTime deadline;
+        if (item['deadline'] != null) {
+          deadline = DateTime.tryParse(item['deadline'].toString()) ??
+              DateTime.now().add(const Duration(days: 7));
+        } else {
+          deadline = DateTime.now().add(const Duration(days: 7));
+        }
+
+        return ComplianceItem(
+          id: item['id']?.toString() ?? '',
+          title: item['title']?.toString() ?? 'Compliance Item',
+          description: item['description']?.toString() ?? '',
+          type: item['type']?.toString() ?? 'policy', // 'policy' or 'upload'
+          status: item['status']?.toString() ??
+              'pending', // 'pending', 'submitted', 'complied', 'rejected'
+          deadline: deadline,
+        );
+      }).toList();
+
       notifyListeners();
     } catch (e) {
+      print('Error fetching compliance items: $e');
       setError('Failed to load compliance items');
     } finally {
       setBusy(false);
