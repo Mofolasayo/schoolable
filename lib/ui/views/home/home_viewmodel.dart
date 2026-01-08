@@ -1012,31 +1012,51 @@ class HomeViewModel extends IndexTrackingViewModel {
 
   /// Dynamic KPI cards based on real data
   List<KpiCard> get kpiCards {
-    // Task Score: from Technical pillar or task completion rate
-    final technicalScore = auraData?.pillars['technical']?.score ?? 0.0;
-    final taskScoreValue = technicalScore > 0
-        ? '${technicalScore.round()}%'
-        : totalTaskCount > 0
-            ? '${(completedTaskCount / totalTaskCount * 100).round()}%'
-            : '0%';
+    // Task Score: based on user's actual task completion
+    // If no tasks, show 0%
+    String taskScoreValue;
+    if (totalTaskCount > 0) {
+      final taskPercentage =
+          (completedTaskCount / totalTaskCount * 100).round();
+      taskScoreValue = '$taskPercentage%';
+    } else {
+      taskScoreValue = '0%';
+    }
 
-    // Attendance: from Culture Fit pillar (includes punctuality)
-    final cultureFitScore = auraData?.pillars['cultureFit']?.score ?? 0.0;
-    final attendanceValue =
-        cultureFitScore > 0 ? '${cultureFitScore.round()}%' : '0%';
+    // Attendance: Check if we have actual attendance data in aura pillars
+    // Look for punctuality submetric or default to 0 if no check-ins
+    String attendanceValue = '0%';
+    final cultureFit = auraData?.pillars['cultureFit'];
+    if (cultureFit != null && cultureFit.subMetrics.isNotEmpty) {
+      // Find punctuality/attendance submetric
+      final punctuality = cultureFit.subMetrics
+          .where((s) =>
+              s.name.toLowerCase().contains('punctuality') ||
+              s.name.toLowerCase().contains('attendance'))
+          .firstOrNull;
+      if (punctuality != null) {
+        attendanceValue = '${punctuality.score.round()}%';
+      } else if (cultureFit.score > 0) {
+        attendanceValue = '${cultureFit.score.round()}%';
+      }
+    }
 
     // Compliance: from Behavioral pillar
     final behavioralScore = auraData?.pillars['behavioral']?.score ?? 0.0;
     final complianceValue =
         behavioralScore > 0 ? '${behavioralScore.round()}%' : '0%';
 
-    // Team Score: from Team KPI data (replaces QGPA)
-    // Shows team's KPI achievement score with grade
-    final teamScoreValue =
-        teamScore != null ? '${teamScore!.overallScore.round()}%' : '--';
-    final teamGrade = teamScore?.grade ?? '';
-    final teamScoreDisplay =
-        teamScore != null ? '$teamScoreValue ($teamGrade)' : 'Team Score';
+    // Team Score: Show actual value or '--' if no data
+    String teamScoreDisplay;
+    String teamGrade = '';
+    if (teamScore != null) {
+      teamScoreDisplay = '${teamScore!.overallScore.round()}%';
+      teamGrade = teamScore!.grade;
+    } else if (teamInsight != null) {
+      teamScoreDisplay = '${teamInsight!.kpiScore.round()}%';
+    } else {
+      teamScoreDisplay = '--';
+    }
 
     return [
       KpiCard(label: 'Task Score', value: taskScoreValue, trend: '--'),

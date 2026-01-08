@@ -977,11 +977,11 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                                 MaterialPageRoute(
                                   builder: (context) => AnnouncementDetailView(
                                     announcement: announcement,
+                                    onMarkAsRead: () =>
+                                        viewModel.markAsRead(announcement),
                                   ),
                                 ),
                               );
-                              // Mark as read
-                              viewModel.markAsRead(announcement);
                             },
                             child: Container(
                               width: 260,

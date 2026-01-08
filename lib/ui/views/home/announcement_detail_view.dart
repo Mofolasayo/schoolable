@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'home_viewmodel.dart';
 
-/// A full-page view for displaying announcement details
+/// A clean, simple announcement detail page
 class AnnouncementDetailView extends StatelessWidget {
   final Announcement announcement;
+  final VoidCallback? onMarkAsRead;
 
   const AnnouncementDetailView({
     Key? key,
     required this.announcement,
+    this.onMarkAsRead,
   }) : super(key: key);
 
   Color _getAnnouncementColor(String type) {
@@ -35,128 +37,78 @@ class AnnouncementDetailView extends StatelessWidget {
     }
   }
 
-  String _formatDate(String time) {
-    // Return the time string as-is since it's already formatted
-    return time;
-  }
-
   @override
   Widget build(BuildContext context) {
     final color = _getAnnouncementColor(announcement.type);
     final icon = _getAnnouncementIcon(announcement.type);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: CustomScrollView(
-        slivers: [
-          // App bar with gradient
-          SliverAppBar(
-            expandedHeight: 140,
-            pinned: true,
-            backgroundColor: color,
-            leading: IconButton(
-              icon: Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child:
-                    const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      color,
-                      color.withOpacity(0.8),
-                    ],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 48, 24, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(icon, color: Colors.white, size: 14),
-                              const SizedBox(width: 6),
-                              Text(
-                                announcement.type.toUpperCase(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
+      backgroundColor: kcBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: kcTextColor, size: 20),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text(
+          'Announcement',
+          style: TextStyle(
+            color: kcTextColor,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
           ),
-
-          // Content
-          SliverToBoxAdapter(
-            child: Padding(
+        ),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Main Card
+            Container(
               padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: kcBorderColor),
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title
-                  Text(
-                    announcement.title,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: kcTextColor,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-
-                  // Time
+                  // Type Badge and Time
                   Row(
                     children: [
-                      Icon(
-                        Icons.access_time_rounded,
-                        size: 16,
-                        color: kcTextMutedColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _formatDate(announcement.time),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: kcTextMutedColor,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(icon, color: color, size: 14),
+                            const SizedBox(width: 6),
+                            Text(
+                              announcement.type.toUpperCase(),
+                              style: TextStyle(
+                                color: color,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      if (!announcement.isRead) ...[
-                        const SizedBox(width: 12),
+                      const Spacer(),
+                      if (!announcement.isRead)
                         Container(
                           padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 2),
+                              horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: kcPrimaryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
@@ -171,56 +123,116 @@ class AnnouncementDetailView extends StatelessWidget {
                             ),
                           ),
                         ),
-                      ],
                     ],
                   ),
+                  const SizedBox(height: 20),
 
-                  const SizedBox(height: 32),
+                  // Title
+                  Text(
+                    announcement.title,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: kcTextColor,
+                      height: 1.3,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  // Time
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.access_time_rounded,
+                        size: 14,
+                        color: kcTextMutedColor,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        announcement.time,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: kcTextMutedColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
 
                   // Divider
                   Container(
                     height: 1,
                     color: Colors.grey[100],
                   ),
+                  const SizedBox(height: 24),
 
-                  const SizedBox(height: 32),
-
-                  // Content section
-                  const Text(
-                    'Message',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: kcTextMutedColor,
-                      letterSpacing: 0.5,
+                  // Message Content
+                  Text(
+                    announcement.message,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: kcTextColor,
+                      height: 1.7,
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Message content
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.grey[100]!),
-                    ),
-                    child: Text(
-                      announcement.message,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        color: kcTextColor,
-                        height: 1.6,
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 48),
                 ],
               ),
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+
+            // Mark as Read Button (if not already read)
+            if (!announcement.isRead)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    onMarkAsRead?.call();
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kcPrimaryColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Mark as Read',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+
+            // Done/Close Button (if already read)
+            if (announcement.isRead)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: kcTextColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    side: BorderSide(color: kcBorderColor),
+                  ),
+                  child: const Text(
+                    'Done',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }

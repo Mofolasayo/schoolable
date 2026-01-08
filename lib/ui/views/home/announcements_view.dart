@@ -231,11 +231,15 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
         // Navigate to announcement detail page
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => AnnouncementDetailView(announcement: a),
+            builder: (context) => AnnouncementDetailView(
+              announcement: a,
+              onMarkAsRead: () {
+                widget.viewModel.markAsRead(a);
+                if (mounted) setState(() => _loadAnnouncements());
+              },
+            ),
           ),
         );
-        // Mark as read
-        widget.viewModel.markAsRead(a);
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
