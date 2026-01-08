@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/compliance/compliance_submission_view.dart';
+import 'package:schoolable/ui/views/home/announcement_detail_view.dart';
 import 'home_viewmodel.dart'; // To access HomeViewModel and Announcement class
 
 class AnnouncementsView extends StatefulWidget {
@@ -225,85 +226,98 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
   }
 
   Widget _buildAnnouncementItem(BuildContext context, Announcement a) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: a.isRead ? Colors.white : kcPrimaryColor.withOpacity(0.04),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: a.isRead ? Colors.grey[200]! : kcPrimaryColor.withOpacity(0.2),
+    return GestureDetector(
+      onTap: () {
+        // Navigate to announcement detail page
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => AnnouncementDetailView(announcement: a),
+          ),
+        );
+        // Mark as read
+        widget.viewModel.markAsRead(a);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: a.isRead ? Colors.white : kcPrimaryColor.withOpacity(0.04),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color:
+                a.isRead ? Colors.grey[200]! : kcPrimaryColor.withOpacity(0.2),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.campaign_rounded,
-                size: 16,
-                color: _getAnnouncementColor(a.type),
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Announcement',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.campaign_rounded,
+                  size: 16,
                   color: _getAnnouncementColor(a.type),
                 ),
-              ),
-              const Spacer(),
-              Text(
-                a.time,
-                style: const TextStyle(
-                  fontSize: 11,
-                  color: kcTextMutedColor,
+                const SizedBox(width: 8),
+                Text(
+                  'Announcement',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: _getAnnouncementColor(a.type),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            a.title,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: a.isRead ? FontWeight.w500 : FontWeight.w600,
-              color: kcTextColor,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            a.message,
-            style: const TextStyle(
-              fontSize: 13,
-              color: kcTextMutedColor,
-              height: 1.4,
-            ),
-          ),
-          if (!a.isRead) ...[
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {
-                  widget.viewModel.markAsRead(a);
-                  setState(() {
-                    _loadAnnouncements();
-                  });
-                },
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(0, 0),
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                const Spacer(),
+                Text(
+                  a.time,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: kcTextMutedColor,
+                  ),
                 ),
-                child:
-                    const Text('Mark as Read', style: TextStyle(fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              a.title,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: a.isRead ? FontWeight.w500 : FontWeight.w600,
+                color: kcTextColor,
               ),
-            )
-          ]
-        ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              a.message,
+              style: const TextStyle(
+                fontSize: 13,
+                color: kcTextMutedColor,
+                height: 1.4,
+              ),
+            ),
+            if (!a.isRead) ...[
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    widget.viewModel.markAsRead(a);
+                    setState(() {
+                      _loadAnnouncements();
+                    });
+                  },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Mark as Read',
+                      style: TextStyle(fontSize: 12)),
+                ),
+              )
+            ]
+          ],
+        ),
       ),
     );
   }
