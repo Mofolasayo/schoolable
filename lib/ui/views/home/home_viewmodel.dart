@@ -1031,8 +1031,8 @@ class HomeViewModel extends IndexTrackingViewModel {
       // Find punctuality/attendance submetric
       final punctuality = cultureFit.subMetrics
           .where((s) =>
-              s.name.toLowerCase().contains('punctuality') ||
-              s.name.toLowerCase().contains('attendance'))
+              s.displayName.toLowerCase().contains('punctuality') ||
+              s.displayName.toLowerCase().contains('attendance'))
           .firstOrNull;
       if (punctuality != null) {
         attendanceValue = '${punctuality.score.round()}%';
