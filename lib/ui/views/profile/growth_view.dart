@@ -42,39 +42,28 @@ class GrowthView extends StackedView<GrowthViewModel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Info Card
+                  // Info Card - Clean white design
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: BorderRadius.circular(24),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFF6366F1).withOpacity(0.3),
-                          blurRadius: 16,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: kcBorderColor),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: kcPrimaryColor.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(14),
                               ),
                               child: const Icon(
                                 Icons.school_rounded,
-                                color: Colors.white,
+                                color: kcPrimaryColor,
                                 size: 28,
                               ),
                             ),
@@ -86,7 +75,7 @@ class GrowthView extends StackedView<GrowthViewModel> {
                                   Text(
                                     'Training Certificates',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: kcTextColor,
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: -0.5,
@@ -96,9 +85,8 @@ class GrowthView extends StackedView<GrowthViewModel> {
                                   Text(
                                     'Upload 1 per quarter for Growth Pillar',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: kcTextMutedColor,
                                       fontSize: 14,
-                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -106,21 +94,31 @@ class GrowthView extends StackedView<GrowthViewModel> {
                             ),
                           ],
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(16),
+                            color: kcBackgroundColor,
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Text(
-                            'Certificates contribute 25% to your Aura Score under the Growth & Learning pillar.',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              height: 1.5,
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline,
+                                  color: kcTextMutedColor.withOpacity(0.6),
+                                  size: 18),
+                              const SizedBox(width: 10),
+                              const Expanded(
+                                child: Text(
+                                  'Certificates contribute 25% to your Aura Score under the Growth & Learning pillar.',
+                                  style: TextStyle(
+                                    color: kcTextMutedColor,
+                                    fontSize: 13,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
