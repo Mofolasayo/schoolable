@@ -92,12 +92,18 @@ class ReportsView extends StackedView<ReportsViewModel> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Stats Cards
-                    if (!viewModel.isBusy) _buildStatsSection(viewModel),
+                    // Stats Cards - show skeleton when loading
+                    if (viewModel.isBusy)
+                      _buildSkeletonStatsSection()
+                    else
+                      _buildStatsSection(viewModel),
                     const SizedBox(height: 24),
 
-                    // Today's Report Status
-                    _buildTodayStatus(context, viewModel),
+                    // Today's Report Status - show skeleton when loading
+                    if (viewModel.isBusy)
+                      _buildSkeletonTodayStatus()
+                    else
+                      _buildTodayStatus(context, viewModel),
                     const SizedBox(height: 24),
 
                     // Recent Reports
@@ -233,6 +239,109 @@ class ReportsView extends StackedView<ReportsViewModel> {
             style: TextStyle(
               fontSize: 10,
               color: kcTextMutedColor.withOpacity(0.8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Skeleton loading for stats section
+  Widget _buildSkeletonStatsSection() {
+    return Row(
+      children: [
+        Expanded(child: _buildSkeletonStatCard()),
+        const SizedBox(width: 12),
+        Expanded(child: _buildSkeletonStatCard()),
+        const SizedBox(width: 12),
+        Expanded(child: _buildSkeletonStatCard()),
+      ],
+    );
+  }
+
+  Widget _buildSkeletonStatCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kcBorderColor),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 24,
+            height: 24,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            width: 40,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: 30,
+            height: 12,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Skeleton loading for today's status
+  Widget _buildSkeletonTodayStatus() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kcBorderColor),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 52,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  width: 150,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 200,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

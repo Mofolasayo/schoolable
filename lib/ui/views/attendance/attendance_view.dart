@@ -21,6 +21,51 @@ class AttendanceView extends StackedView<AttendanceViewModel> {
   @override
   Widget builder(
       BuildContext context, AttendanceViewModel viewModel, Widget? child) {
+    // Show loading skeleton while initializing
+    if (viewModel.isBusy) {
+      return SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Check In',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                          color: kcTextColor,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Loading your attendance...',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: kcTextMutedColor.withOpacity(0.8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              // Skeleton loading card
+              _buildSkeletonCheckInCard(),
+            ],
+          ),
+        ),
+      );
+    }
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -1242,6 +1287,62 @@ class AttendanceView extends StackedView<AttendanceViewModel> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  /// Skeleton loading card while data is loading
+  Widget _buildSkeletonCheckInCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kcBorderColor),
+      ),
+      child: Column(
+        children: [
+          // Skeleton icon
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(16),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Skeleton title
+          Container(
+            width: 180,
+            height: 20,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(6),
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Skeleton subtitle
+          Container(
+            width: 220,
+            height: 14,
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // Skeleton button
+          Container(
+            width: double.infinity,
+            height: 52,
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(14),
+            ),
+          ),
+        ],
       ),
     );
   }

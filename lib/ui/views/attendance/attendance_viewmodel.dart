@@ -183,12 +183,17 @@ class AttendanceViewModel extends BaseViewModel {
   }
 
   Future<void> initialize() async {
-    // 1. Load cached data first for instant display
-    await _loadCachedData();
+    setBusy(true);
+    try {
+      // 1. Load cached data first for instant display
+      await _loadCachedData();
 
-    // 2. Fetch fresh data in background
-    await _loadTodayStatus();
-    await _loadRecentActivity();
+      // 2. Fetch fresh data in background
+      await _loadTodayStatus();
+      await _loadRecentActivity();
+    } finally {
+      setBusy(false);
+    }
   }
 
   /// Load cached attendance data for instant display
