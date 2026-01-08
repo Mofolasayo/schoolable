@@ -1753,6 +1753,29 @@ class BackendApiService {
     }
   }
 
+  /// Get my individual KPIs (set by team lead)
+  Future<Map<String, dynamic>?> getMyIndividualKpis(
+      {String? quarter, int? year}) async {
+    try {
+      String endpoint = '/api/individual-kpis/my';
+      final params = <String, String>{};
+      if (quarter != null) params['quarter'] = quarter;
+      if (year != null) params['year'] = year.toString();
+      if (params.isNotEmpty) {
+        endpoint +=
+            '?${params.entries.map((e) => '${e.key}=${e.value}').join('&')}';
+      }
+      final result = await _get(endpoint);
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching individual KPIs: $e');
+      return null;
+    }
+  }
+
   // ===================== PEER HELPFULNESS RATINGS =====================
 
   /// Get colleagues to rate for helpfulness

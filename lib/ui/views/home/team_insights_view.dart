@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:stacked/stacked.dart';
+import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/home/home_viewmodel.dart';
 
-/// Team Insights View
+/// Team Insights View - Simplified and Clean
 /// Displays AI-generated insights and recommendations for the team
 class TeamInsightsView extends StatelessWidget {
   const TeamInsightsView({super.key});
@@ -15,71 +16,93 @@ class TeamInsightsView extends StatelessWidget {
       initialiseSpecialViewModelsOnce: true,
       builder: (context, viewModel, child) {
         return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
+          backgroundColor: kcBackgroundColor,
           appBar: AppBar(
             title: const Text(
               'Team Insights',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
             ),
             backgroundColor: Colors.white,
-            foregroundColor: Colors.black87,
+            foregroundColor: kcTextColor,
             elevation: 0,
             centerTitle: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios, size: 20),
+              onPressed: () => Navigator.pop(context),
+            ),
           ),
           body: viewModel.isLoadingTeamData
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Team Score Card
-                      _buildTeamScoreCard(viewModel),
-                      const SizedBox(height: 20),
+              ? const Center(
+                  child: CircularProgressIndicator(color: kcPrimaryColor))
+              : RefreshIndicator(
+                  onRefresh: () async => viewModel.loadTeamData(),
+                  color: kcPrimaryColor,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Simple Header Stats Row
+                        _buildSimpleStatsRow(viewModel),
+                        const SizedBox(height: 24),
 
-                      // AI Summary
-                      if (viewModel.teamInsight != null) ...[
-                        _buildSummaryCard(viewModel.teamInsight!),
-                        const SizedBox(height: 20),
+                        // AI Summary Section
+                        if (viewModel.teamInsight != null) ...[
+                          _buildSummaryCard(viewModel.teamInsight!),
+                          const SizedBox(height: 20),
 
-                        // Top Performing KPIs
-                        if (viewModel.teamInsight!.topPerforming.isNotEmpty)
-                          _buildInsightSection(
-                            'Top Performing',
-                            viewModel.teamInsight!.topPerforming,
-                            Icons.trending_up,
-                            Colors.green,
-                          ),
+                          // Insight Sections
+                          if (viewModel
+                              .teamInsight!.topPerforming.isNotEmpty) ...[
+                            _buildInsightSection(
+                              'Top Performing',
+                              viewModel.teamInsight!.topPerforming,
+                              Icons.trending_up_rounded,
+                              kcTealColor,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
-                        // Needs Attention
-                        if (viewModel.teamInsight!.needsAttention.isNotEmpty)
-                          _buildInsightSection(
-                            'Needs Attention',
-                            viewModel.teamInsight!.needsAttention,
-                            Icons.warning_amber_rounded,
-                            Colors.orange,
-                          ),
+                          if (viewModel
+                              .teamInsight!.needsAttention.isNotEmpty) ...[
+                            _buildInsightSection(
+                              'Needs Attention',
+                              viewModel.teamInsight!.needsAttention,
+                              Icons.warning_amber_rounded,
+                              kcAmberColor,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
-                        // Recommendations
-                        if (viewModel.teamInsight!.recommendations.isNotEmpty)
-                          _buildInsightSection(
-                            'Recommendations',
-                            viewModel.teamInsight!.recommendations,
-                            Icons.lightbulb_outline,
-                            Colors.blue,
-                          ),
+                          if (viewModel
+                              .teamInsight!.recommendations.isNotEmpty) ...[
+                            _buildInsightSection(
+                              'Recommendations',
+                              viewModel.teamInsight!.recommendations,
+                              Icons.lightbulb_outline_rounded,
+                              kcPrimaryColor,
+                            ),
+                            const SizedBox(height: 16),
+                          ],
 
-                        // Risk Alerts
-                        if (viewModel.teamInsight!.riskAlerts.isNotEmpty)
-                          _buildInsightSection(
-                            'Risk Alerts',
-                            viewModel.teamInsight!.riskAlerts,
-                            Icons.error_outline,
-                            Colors.red,
-                          ),
-                      ] else
-                        _buildNoInsightsCard(),
-                    ],
+                          if (viewModel.teamInsight!.riskAlerts.isNotEmpty) ...[
+                            _buildInsightSection(
+                              'Risk Alerts',
+                              viewModel.teamInsight!.riskAlerts,
+                              Icons.error_outline_rounded,
+                              kcRoseColor,
+                            ),
+                          ],
+                        ] else
+                          _buildNoInsightsCard(),
+
+                        const SizedBox(height: 32),
+                      ],
+                    ),
                   ),
                 ),
         );
@@ -87,152 +110,134 @@ class TeamInsightsView extends StatelessWidget {
     );
   }
 
-  Widget _buildTeamScoreCard(HomeViewModel viewModel) {
+  /// Simple stats row at the top - replaces the big purple card
+  Widget _buildSimpleStatsRow(HomeViewModel viewModel) {
     final score = viewModel.teamScore;
     final insight = viewModel.teamInsight;
+    final kpiScore = score?.overallScore ?? insight?.kpiScore ?? 0;
+    final grade = score?.grade ?? 'N/A';
 
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF6366F1),
-            const Color(0xFF8B5CF6),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF6366F1).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    score?.teamName ?? 'Your Team',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
+    return Row(
+      children: [
+        // KPI Score
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kcBorderColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: kcPrimaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.analytics_outlined,
+                        size: 16,
+                        color: kcPrimaryColor,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    score?.department ??
-                        viewModel.userDepartment ??
-                        'Department',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                    const Spacer(),
+                    Text(
+                      score?.quarter ?? 'Q1',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: kcTextMutedColor,
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
+                  ],
                 ),
-                child: Text(
-                  score?.quarter ?? 'Q1',
+                const SizedBox(height: 12),
+                Text(
+                  '${kpiScore.round()}%',
                   style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Team KPI Score',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        score != null
-                            ? '${score.overallScore.round()}'
-                            : insight != null
-                                ? '${insight.kpiScore.round()}'
-                                : '--',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 48,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: Text(
-                          '%',
-                          style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 24,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  score?.grade ?? 'N/A',
-                  style: TextStyle(
-                    color: _getGradeColor(score?.grade),
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
+                    color: kcTextColor,
                   ),
                 ),
-              ),
-            ],
-          ),
-          if (insight != null) ...[
-            const SizedBox(height: 16),
-            Text(
-              'Week ${insight.weekNumber} Analysis',
-              style: const TextStyle(
-                color: Colors.white60,
-                fontSize: 12,
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  'Team KPI Score',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: kcTextMutedColor,
+                  ),
+                ),
+              ],
             ),
-          ],
-        ],
-      ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Grade
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kcBorderColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: _getGradeColor(grade).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.grade_outlined,
+                        size: 16,
+                        color: _getGradeColor(grade),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (insight != null)
+                      Text(
+                        'Week ${insight.weekNumber}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: kcTextMutedColor,
+                        ),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  grade,
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: _getGradeColor(grade),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Overall Grade',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: kcTextMutedColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -243,13 +248,7 @@ class TeamInsightsView extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: kcBorderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -257,24 +256,24 @@ class TeamInsightsView extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF6366F1).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
+                  color: kcPrimaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.psychology,
-                  color: Color(0xFF6366F1),
-                  size: 24,
+                  Icons.psychology_outlined,
+                  color: kcPrimaryColor,
+                  size: 18,
                 ),
               ),
               const SizedBox(width: 12),
               const Text(
                 'AI Summary',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: kcTextColor,
                 ),
               ),
             ],
@@ -282,9 +281,9 @@ class TeamInsightsView extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             insight.summary,
-            style: const TextStyle(
-              fontSize: 15,
-              color: Color(0xFF475569),
+            style: TextStyle(
+              fontSize: 14,
+              color: kcTextMutedColor,
               height: 1.6,
             ),
           ),
@@ -295,77 +294,68 @@ class TeamInsightsView extends StatelessWidget {
 
   Widget _buildInsightSection(
       String title, List<String> items, IconData icon, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(icon, color: color, size: 20),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kcBorderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
-                  ),
+                child: Icon(icon, color: color, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: kcTextColor,
                 ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            ...items.map((item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        margin: const EdgeInsets.only(top: 6),
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...items.map((item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 5,
+                      height: 5,
+                      decoration: BoxDecoration(
+                        color: color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: kcTextMutedColor,
+                          height: 1.5,
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          item,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Color(0xFF475569),
-                            height: 1.5,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                )),
-          ],
-        ),
+                    ),
+                  ],
+                ),
+              )),
+        ],
       ),
     );
   }
@@ -373,41 +363,42 @@ class TeamInsightsView extends StatelessWidget {
   Widget _buildNoInsightsCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: kcBorderColor),
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.insights,
-            size: 64,
-            color: Colors.grey[300],
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: kcPrimaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.insights_outlined,
+              size: 32,
+              color: kcPrimaryColor,
+            ),
           ),
           const SizedBox(height: 16),
           const Text(
             'No Insights Yet',
             style: TextStyle(
-              fontSize: 18,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E293B),
+              color: kcTextColor,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'AI insights are generated weekly after your team lead submits KPI progress reports.',
+            'AI insights are generated weekly based on your team\'s KPI progress reports.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
+              fontSize: 13,
+              color: kcTextMutedColor,
               height: 1.5,
             ),
           ),
@@ -419,17 +410,16 @@ class TeamInsightsView extends StatelessWidget {
   Color _getGradeColor(String? grade) {
     switch (grade) {
       case 'A':
-        return const Color(0xFF22C55E);
+        return kcTealColor;
       case 'B':
-        return const Color(0xFF3B82F6);
+        return kcPrimaryColor;
       case 'C':
-        return const Color(0xFFF59E0B);
+        return kcAmberColor;
       case 'D':
-        return const Color(0xFFEF4444);
       case 'F':
-        return const Color(0xFFDC2626);
+        return kcRoseColor;
       default:
-        return const Color(0xFF6B7280);
+        return kcTextMutedColor;
     }
   }
 }

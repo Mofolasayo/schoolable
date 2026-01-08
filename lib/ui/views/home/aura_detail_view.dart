@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:schoolable/app/app.locator.dart';
+import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/home/home_viewmodel.dart';
 
@@ -16,7 +18,43 @@ class AuraDetailView extends StatefulWidget {
 class _AuraDetailViewState extends State<AuraDetailView> {
   String? expandedPillarKey;
 
+  // Individual KPIs state
+  List<IndividualKpi> myKpis = [];
+  double myKpiAverageAchievement = 0;
+  bool isLoadingKpis = true;
+
   AuraData get auraData => widget.auraData;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchMyKpis();
+  }
+
+  Future<void> _fetchMyKpis() async {
+    try {
+      final backendService = locator<BackendApiService>();
+      final response = await backendService.getMyIndividualKpis();
+      if (response != null && mounted) {
+        final kpisList = response['kpis'] as List<dynamic>? ?? [];
+        setState(() {
+          myKpis = kpisList
+              .map((k) => IndividualKpi.fromMap(k as Map<String, dynamic>))
+              .toList();
+          myKpiAverageAchievement =
+              (response['averageAchievement'] as num?)?.toDouble() ?? 0;
+          isLoadingKpis = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          myKpis = [];
+          isLoadingKpis = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +90,10 @@ class _AuraDetailViewState extends State<AuraDetailView> {
 
             // Grade Info Card
             _buildGradeInfoCard(),
+            const SizedBox(height: 32),
+
+            // My KPIs Section
+            _buildMyKpisSection(),
             const SizedBox(height: 32),
 
             // Pillar Breakdown
@@ -361,6 +403,261 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                   ),
                 ),
               ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build the My KPIs section showing individual KPIs set by team lead
+  Widget _buildMyKpisSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Row(
+          children: [
+            Container(
+              width: 4,
+              height: 24,
+              decoration: BoxDecoration(
+                color: kcTealColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'My Individual KPIs',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: kcTextColor,
+                letterSpacing: -0.5,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'KPIs set by your team lead for this quarter',
+          style: TextStyle(
+            fontSize: 14,
+            color: kcTextMutedColor.withOpacity(0.8),
+            height: 1.4,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // KPIs Content
+        if (isLoadingKpis)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kcBorderColor),
+            ),
+            child: const Center(
+              child: CupertinoActivityIndicator(),
+            ),
+          )
+        else if (myKpis.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kcBorderColor),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.assignment_outlined,
+                  size: 40,
+                  color: kcTextMutedColor.withOpacity(0.5),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'No KPIs Set Yet',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: kcTextColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Your team lead hasn\'t set individual KPIs for you this quarter.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: kcTextMutedColor,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kcBorderColor),
+            ),
+            child: Column(
+              children: [
+                // Average Achievement Header
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: kcTealColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.trending_up_rounded,
+                        color: kcTealColor,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Average Achievement',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: kcTextMutedColor,
+                            ),
+                          ),
+                          Text(
+                            '${myKpiAverageAchievement.toStringAsFixed(1)}%',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: kcTextColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: kcPrimaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${myKpis.length} KPIs',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: kcPrimaryColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                const Divider(height: 1),
+                const SizedBox(height: 16),
+
+                // KPI List
+                ...myKpis.map((kpi) => _buildKpiItem(kpi)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildKpiItem(IndividualKpi kpi) {
+    final progressColor = kpi.achievementPercentage >= 80
+        ? kcTealColor
+        : kpi.achievementPercentage >= 50
+            ? kcAmberColor
+            : kcRoseColor;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  kpi.name,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: kcTextColor,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: progressColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${kpi.achievementPercentage.toStringAsFixed(0)}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: progressColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          if (kpi.description != null && kpi.description!.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                kpi.description!,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: kcTextMutedColor,
+                ),
+              ),
+            ),
+          Row(
+            children: [
+              Text(
+                'Current: ${kpi.currentValue.toStringAsFixed(1)} / Target: ${kpi.targetValue.toStringAsFixed(1)} ${kpi.targetUnit ?? ''}',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: kcTextMutedColor,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                'Weight: ${kpi.weight}%',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: kcTextMutedColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: (kpi.achievementPercentage / 100).clamp(0.0, 1.0),
+              minHeight: 6,
+              backgroundColor: Colors.grey[100],
+              valueColor: AlwaysStoppedAnimation<Color>(progressColor),
             ),
           ),
         ],

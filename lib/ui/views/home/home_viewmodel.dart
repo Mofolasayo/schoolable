@@ -282,6 +282,52 @@ class TeamInsightData {
   }
 }
 
+/// Individual KPI data - KPIs set by team lead for an employee
+class IndividualKpi {
+  IndividualKpi({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.targetValue,
+    required this.currentValue,
+    required this.targetUnit,
+    required this.weight,
+    required this.quarter,
+    required this.year,
+    required this.achievementPercentage,
+    required this.isActive,
+  });
+
+  final String id;
+  final String name;
+  final String? description;
+  final double targetValue;
+  final double currentValue;
+  final String? targetUnit;
+  final int weight;
+  final String quarter;
+  final int year;
+  final double achievementPercentage;
+  final bool isActive;
+
+  factory IndividualKpi.fromMap(Map<String, dynamic> map) {
+    return IndividualKpi(
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'Unnamed KPI',
+      description: map['description']?.toString(),
+      targetValue: (map['targetValue'] as num?)?.toDouble() ?? 0,
+      currentValue: (map['currentValue'] as num?)?.toDouble() ?? 0,
+      targetUnit: map['targetUnit']?.toString(),
+      weight: (map['weight'] as num?)?.toInt() ?? 0,
+      quarter: map['quarter']?.toString() ?? 'Q1',
+      year: (map['year'] as num?)?.toInt() ?? DateTime.now().year,
+      achievementPercentage:
+          (map['achievementPercentage'] as num?)?.toDouble() ?? 0,
+      isActive: map['isActive'] == true,
+    );
+  }
+}
+
 class HomeViewModel extends IndexTrackingViewModel {
   final _backendService = locator<BackendApiService>();
   final _cacheService = locator<CacheService>();
@@ -308,6 +354,12 @@ class HomeViewModel extends IndexTrackingViewModel {
   TeamInsightData? teamInsight;
   bool isLoadingTeamData = false;
 
+  // Individual KPIs - set by team lead
+  List<IndividualKpi> myKpis = [];
+  double myKpiAverageAchievement = 0;
+  int myKpiTotalWeight = 0;
+  bool isLoadingMyKpis = false;
+
   // Compliance Data
   List<ComplianceItem> complianceItems = [];
 
@@ -332,7 +384,8 @@ class HomeViewModel extends IndexTrackingViewModel {
     _fetchAnnouncements();
     _fetchTasks();
     _fetchAuraData(); // Fetch Aura score
-    _fetchTeamData(); // Fetch Team Score & AI Insights
+    loadTeamData(); // Fetch Team Score & AI Insights (public for refresh)
+    fetchMyKpis(); // Fetch individual KPIs
     _fetchComplianceItems(); // Fetch Compliance items
     _fetchPeerHelpfulnessStatus(); // Check if peer ratings needed
     _fetchTaskRatingStatus(); // Check if task ratings needed
@@ -424,7 +477,7 @@ class HomeViewModel extends IndexTrackingViewModel {
       _loadUserProfile(),
       _fetchTasks(),
       _fetchAuraData(),
-      _fetchTeamData(),
+      loadTeamData(),
       _fetchComplianceItems(),
     ]);
   }
@@ -464,7 +517,7 @@ class HomeViewModel extends IndexTrackingViewModel {
   }
 
   /// Fetch Team Score and AI Insights from backend
-  Future<void> _fetchTeamData() async {
+  Future<void> loadTeamData() async {
     if (teamScore == null) {
       isLoadingTeamData = true;
       rebuildUi();
@@ -490,6 +543,33 @@ class HomeViewModel extends IndexTrackingViewModel {
       // Keep null on error - UI will show fallback
     } finally {
       isLoadingTeamData = false;
+      rebuildUi();
+    }
+  }
+
+  /// Fetch individual KPIs set by team lead for this employee
+  Future<void> fetchMyKpis() async {
+    isLoadingMyKpis = true;
+    rebuildUi();
+
+    try {
+      final response = await _backendService.getMyIndividualKpis();
+      if (response != null) {
+        final kpisList = response['kpis'] as List<dynamic>? ?? [];
+        myKpis = kpisList
+            .map((k) => IndividualKpi.fromMap(k as Map<String, dynamic>))
+            .toList();
+        myKpiAverageAchievement =
+            (response['averageAchievement'] as num?)?.toDouble() ?? 0;
+        myKpiTotalWeight = (response['totalWeight'] as num?)?.toInt() ?? 0;
+        print(
+            '✅ Individual KPIs loaded: ${myKpis.length} KPIs, avg: $myKpiAverageAchievement%');
+      }
+    } catch (e) {
+      print('Error fetching individual KPIs: $e');
+      myKpis = [];
+    } finally {
+      isLoadingMyKpis = false;
       rebuildUi();
     }
   }
