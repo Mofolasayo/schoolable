@@ -564,6 +564,8 @@ class _SubmitReportSheetState extends State<_SubmitReportSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: const BoxDecoration(
@@ -606,10 +608,11 @@ class _SubmitReportSheetState extends State<_SubmitReportSheet> {
               ],
             ),
           ),
-          // Form
+          // Form - Expanded and scrollable
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
+              padding: EdgeInsets.fromLTRB(20, 0, 20, bottomInset > 0 ? 20 : 0),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -650,42 +653,51 @@ class _SubmitReportSheetState extends State<_SubmitReportSheet> {
                       controller: _notesController,
                       maxLines: 2,
                     ),
-                    const SizedBox(height: 100),
+                    const SizedBox(height: 32),
                   ],
                 ),
               ),
             ),
           ),
-          // Submit Button
-          Container(
-            padding: const EdgeInsets.all(20),
+          // Submit Button - Make always visible
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: EdgeInsets.fromLTRB(
+                20, 16, 20, bottomInset > 0 ? bottomInset + 16 : 20),
             decoration: BoxDecoration(
               color: Colors.white,
               border: Border(top: BorderSide(color: kcBorderColor)),
+              boxShadow: bottomInset > 0
+                  ? [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, -2),
+                      ),
+                    ]
+                  : null,
             ),
-            child: SafeArea(
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSubmitting ? null : _submitReport,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kcPrimaryColor,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _isSubmitting ? null : _submitReport,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: kcPrimaryColor,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: _isSubmitting
-                      ? const CupertinoActivityIndicator(color: Colors.white)
-                      : const Text(
-                          'Submit Report',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
                 ),
+                child: _isSubmitting
+                    ? const CupertinoActivityIndicator(color: Colors.white)
+                    : const Text(
+                        'Submit Report',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
               ),
             ),
           ),

@@ -13,14 +13,12 @@ import 'firebase_options.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load env variables
   await dotenv.load(fileName: "assets/.env");
 
   await setupLocator();
   setupDialogUi();
   setupBottomSheetUi();
 
-  // Initialize Firebase for FCM/local notifications if configured
   final firebaseOptions = DefaultFirebaseOptions.currentPlatform;
   final hasRealFirebaseConfig = ![
     firebaseOptions.apiKey,

@@ -9,6 +9,7 @@ import 'package:schoolable/ui/views/profile/profile_view.dart';
 import 'package:schoolable/ui/views/tasks/task_detail_view.dart';
 import 'package:schoolable/ui/views/home/announcements_view.dart';
 import 'package:schoolable/ui/views/home/aura_detail_view.dart';
+import 'package:schoolable/ui/views/home/announcement_detail_view.dart';
 import 'package:schoolable/ui/views/home/team_insights_view.dart';
 import 'package:schoolable/ui/common/widgets/app_avatar.dart';
 
@@ -971,148 +972,16 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                           final announcement = viewModel.announcements[index];
                           return GestureDetector(
                             onTap: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Colors.transparent,
-                                builder: (context) => Container(
-                                  decoration: const BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.vertical(
-                                        top: Radius.circular(24)),
-                                  ),
-                                  padding:
-                                      const EdgeInsets.fromLTRB(24, 12, 24, 32),
-                                  constraints: BoxConstraints(
-                                    maxHeight:
-                                        MediaQuery.of(context).size.height *
-                                            0.60,
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Drag handle
-                                      Center(
-                                        child: Container(
-                                          width: 40,
-                                          height: 4,
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[300],
-                                            borderRadius:
-                                                BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 24),
-
-                                      // Header
-                                      Row(
-                                        children: [
-                                          Container(
-                                            padding: const EdgeInsets.all(8),
-                                            decoration: BoxDecoration(
-                                              color: _getAnnouncementColor(
-                                                      announcement.type)
-                                                  .withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                            ),
-                                            child: Icon(
-                                              Icons.campaign_rounded,
-                                              color: _getAnnouncementColor(
-                                                  announcement.type),
-                                              size: 18,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                'Announcement',
-                                                style: TextStyle(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: _getAnnouncementColor(
-                                                      announcement.type),
-                                                  letterSpacing: 0.5,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                announcement.time,
-                                                style: const TextStyle(
-                                                  fontSize: 11,
-                                                  color: kcTextMutedColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 20),
-
-                                      // Content
-                                      Text(
-                                        announcement.title,
-                                        style: const TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w600,
-                                          color: kcTextColor,
-                                          letterSpacing: -0.3,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Expanded(
-                                        child: SingleChildScrollView(
-                                          child: Text(
-                                            announcement.message,
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              color: Color(
-                                                  0xFF4B5563), // Slate 600
-                                              height: 1.5,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 24),
-
-                                      // Action Button
-                                      SizedBox(
-                                        width: double.infinity,
-                                        child: ElevatedButton(
-                                          onPressed: () {
-                                            Navigator.pop(context);
-                                            viewModel.markAsRead(announcement);
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: kcPrimaryColor,
-                                            foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 16),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                            elevation: 0,
-                                          ),
-                                          child: const Text(
-                                            'Mark as Read',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                              // Navigate to announcement detail page
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => AnnouncementDetailView(
+                                    announcement: announcement,
                                   ),
                                 ),
                               );
+                              // Mark as read
+                              viewModel.markAsRead(announcement);
                             },
                             child: Container(
                               width: 260,
