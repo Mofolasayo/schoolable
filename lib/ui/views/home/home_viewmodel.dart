@@ -797,9 +797,69 @@ class HomeViewModel extends IndexTrackingViewModel {
   }
 
   Future<List<Announcement>> fetchAllAnnouncements() async {
-    // Use BackendApiService for all announcements with read status
+    // Fetch regular announcements
     final data = await _backendService.getAnnouncements();
-    return _parseAnnouncements(data);
+    final announcements = _parseAnnouncements(data);
+
+    // Also fetch notification history (includes smart reminders)
+    try {
+      final notificationsData = await _backendService.getNotifications();
+      final notifications =
+          notificationsData['notifications'] as List<dynamic>? ?? [];
+
+      // Convert notifications to Announcement format
+      for (final notif in notifications) {
+        final id = notif['id']?.toString() ?? '';
+        final title = notif['title']?.toString() ?? 'Notification';
+        final body = notif['body']?.toString() ?? '';
+        final type = notif['type']?.toString().toLowerCase() ?? 'info';
+        final isRead = notif['isRead'] as bool? ?? false;
+        final sentAt = notif['sentAt']?.toString();
+
+        // Convert to time string
+        String timeStr = 'Just now';
+        if (sentAt != null) {
+          try {
+            final dateTime = DateTime.parse(sentAt);
+            timeStr = _getTimeAgo(dateTime);
+          } catch (_) {}
+        }
+
+        // Map notification type to announcement type
+        String announcementType = 'info';
+        if (type.contains('task')) {
+          announcementType = 'info';
+        } else if (type.contains('alert') || type.contains('urgent')) {
+          announcementType = 'alert';
+        } else if (type.contains('success') || type.contains('completed')) {
+          announcementType = 'success';
+        } else if (type.contains('smart_reminder')) {
+          announcementType = 'alert'; // Make smart reminders stand out
+        }
+
+        announcements.add(Announcement(
+          id: 'notif_$id',
+          title: title,
+          message: body,
+          time: timeStr,
+          type: announcementType,
+          isRead: isRead,
+        ));
+      }
+    } catch (e) {
+      print('Error fetching notifications: $e');
+      // Continue with just announcements if notifications fail
+    }
+
+    // Sort by time (most recent first) - unread items first
+    announcements.sort((a, b) {
+      if (a.isRead != b.isRead) {
+        return a.isRead ? 1 : -1; // Unread first
+      }
+      return 0;
+    });
+
+    return announcements;
   }
 
   String _getTimeAgo(DateTime dateTime) {
