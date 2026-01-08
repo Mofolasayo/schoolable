@@ -2058,21 +2058,6 @@ class BackendApiService {
     return await _get('/api/daily-reports/stats');
   }
 
-  // ==================== INDIVIDUAL KPIS ====================
-
-  /// Get my individual KPIs
-  Future<Map<String, dynamic>> getMyIndividualKpis({
-    String? quarter,
-    int? year,
-  }) async {
-    String endpoint = '/api/individual-kpis/my';
-    List<String> params = [];
-    if (quarter != null) params.add('quarter=$quarter');
-    if (year != null) params.add('year=$year');
-    if (params.isNotEmpty) endpoint += '?${params.join('&')}';
-    return await _get(endpoint);
-  }
-
   // ==================== HELPER METHODS ====================
 
   String _getCurrentQuarter() {
