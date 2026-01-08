@@ -335,6 +335,11 @@ class HomeViewModel extends IndexTrackingViewModel {
   Timer? _timer;
   StreamSubscription? _taskSubscription;
 
+  // Debounce timers to prevent excessive API calls
+  Timer? _taskDebounce;
+  Timer? _auraDebounce;
+  Timer? _announcementDebounce;
+
   String? userName;
   String? userRole;
   String? userDepartment;
@@ -409,28 +414,50 @@ class HomeViewModel extends IndexTrackingViewModel {
       // Subscribe to notifications for task/announcement updates
       _wsService.subscribeToNotifications(onNotification: (message) {
         print('📥 Received notification via WebSocket: ${message.type}');
-        // Check notification type and refresh accordingly
+        // Check notification type and refresh accordingly - DEBOUNCED
         final notificationType =
             message.data['notificationType']?.toString() ?? '';
         if (notificationType.contains('task')) {
-          _fetchTasks();
-          // Also refresh Aura data since task completion affects performance scores
-          _fetchAuraData();
+          _fetchTasksDebounced();
+          _fetchAuraDebounced();
         } else if (notificationType.contains('announcement')) {
-          _fetchAnnouncements();
+          _fetchAnnouncementsDebounced();
         } else if (notificationType.contains('attendance')) {
-          // Attendance changes affect Aura score
-          _fetchAuraData();
+          _fetchAuraDebounced();
         } else {
-          // Refresh all for general notifications
-          _fetchTasks();
-          _fetchAnnouncements();
-          _fetchAuraData();
+          // Refresh all for general notifications - debounced
+          _fetchTasksDebounced();
+          _fetchAnnouncementsDebounced();
+          _fetchAuraDebounced();
         }
       });
     } catch (e) {
       print('⚠️ WebSocket connection failed: $e');
     }
+  }
+
+  /// Debounced task fetching - prevents excessive API calls
+  void _fetchTasksDebounced() {
+    _taskDebounce?.cancel();
+    _taskDebounce = Timer(const Duration(milliseconds: 500), () {
+      _fetchTasks();
+    });
+  }
+
+  /// Debounced Aura data fetching
+  void _fetchAuraDebounced() {
+    _auraDebounce?.cancel();
+    _auraDebounce = Timer(const Duration(milliseconds: 500), () {
+      _fetchAuraData();
+    });
+  }
+
+  /// Debounced announcement fetching
+  void _fetchAnnouncementsDebounced() {
+    _announcementDebounce?.cancel();
+    _announcementDebounce = Timer(const Duration(milliseconds: 500), () {
+      _fetchAnnouncements();
+    });
   }
 
   Future<void> _loadCachedData() async {
@@ -468,6 +495,10 @@ class HomeViewModel extends IndexTrackingViewModel {
   void dispose() {
     _timer?.cancel();
     _taskSubscription?.cancel();
+    // Cancel debounce timers
+    _taskDebounce?.cancel();
+    _auraDebounce?.cancel();
+    _announcementDebounce?.cancel();
     super.dispose();
   }
 
