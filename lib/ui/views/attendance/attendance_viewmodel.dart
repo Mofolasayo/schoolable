@@ -463,10 +463,9 @@ class AttendanceViewModel extends BaseViewModel {
         // Check if user is within range of any office
         if (!_isWithinOfficeRange) {
           _isVerifyingLocation = false;
-          _errorMessage = '📍 You are not at an approved office location.\n\n'
-              'You are ${distanceMessage} from ${_nearestOfficeName ?? "the office"}.\n\n'
-              'Please go to one of our VGC offices (Road 2 or Road 7) '
-              'before checking in.';
+          _errorMessage = '📍 You are not at an approved location.\n\n'
+              'You are ${distanceMessage} from VGC.\n\n'
+              'Please go to the office or VGC main gate before checking in.';
           _statusMessage = null;
           rebuildUi();
           return false;

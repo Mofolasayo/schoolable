@@ -88,10 +88,10 @@ class TasksView extends StackedView<TasksViewModel> {
   void onViewModelReady(TasksViewModel viewModel) => viewModel.initialize();
 
   Widget _buildHeader() {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Column(
+        Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
@@ -112,16 +112,16 @@ class TasksView extends StackedView<TasksViewModel> {
             ),
           ],
         ),
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: kcBorderColor),
-          ),
-          child:
-              const Icon(Icons.more_horiz, color: kcTextMutedColor, size: 20),
-        ),
+        // Container(
+        //   padding: const EdgeInsets.all(8),
+        //   decoration: BoxDecoration(
+        //     color: Colors.white,
+        //     borderRadius: BorderRadius.circular(12),
+        //     border: Border.all(color: kcBorderColor),
+        //   ),
+        //   child:
+        //       const Icon(Icons.more_horiz, color: kcTextMutedColor, size: 20),
+        // ),
       ],
     );
   }
