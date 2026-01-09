@@ -116,11 +116,59 @@ class AttendanceRecord {
   bool get isAbsent => status.toLowerCase() == 'absent';
 }
 
+/// Office locations for geofencing check-in
+class OfficeLocation {
+  final String name;
+  final String address;
+  final double latitude;
+  final double longitude;
+
+  const OfficeLocation({
+    required this.name,
+    required this.address,
+    required this.latitude,
+    required this.longitude,
+  });
+}
+
 class AttendanceViewModel extends BaseViewModel {
   final _backendService = locator<BackendApiService>();
   final _cacheService = locator<CacheService>();
   final _imagePicker = ImagePicker();
   final _deviceInfo = DeviceInfoPlugin();
+
+  /// Approved office locations for check-in
+  /// Check-in is only allowed within [maxCheckInDistanceMeters] of these locations
+  static const List<OfficeLocation> officeLocations = [
+    OfficeLocation(
+      name: 'VGC Office - Road 7',
+      address: 'Road 7, VGC, Eti-Osa, Lagos',
+      latitude: 6.46060,
+      longitude: 3.55440,
+    ),
+    OfficeLocation(
+      name: 'VGC Office - Road 2',
+      address: 'Road 2, VGC, Eti-Osa, Lagos',
+      latitude: 6.46883,
+      longitude: 3.54036,
+    ),
+  ];
+
+  /// Maximum distance from office to allow check-in (in meters)
+  /// 150m allows for GPS inaccuracy while ensuring user is at/near office
+  static const double maxCheckInDistanceMeters = 150.0;
+
+  /// User's distance from nearest office
+  double? _distanceFromNearestOffice;
+  double? get distanceFromNearestOffice => _distanceFromNearestOffice;
+
+  /// Name of nearest office
+  String? _nearestOfficeName;
+  String? get nearestOfficeName => _nearestOfficeName;
+
+  /// Is user within check-in range of any office?
+  bool _isWithinOfficeRange = false;
+  bool get isWithinOfficeRange => _isWithinOfficeRange;
 
   // State
   bool _hasCheckedInToday = false;
@@ -293,6 +341,48 @@ class AttendanceViewModel extends BaseViewModel {
     }
   }
 
+  /// Calculate distance to all offices and find the nearest one
+  void _checkOfficeProximity() {
+    if (_currentPosition == null) return;
+
+    double? minDistance;
+    String? nearestName;
+
+    for (final office in officeLocations) {
+      final distance = Geolocator.distanceBetween(
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
+        office.latitude,
+        office.longitude,
+      );
+
+      if (minDistance == null || distance < minDistance) {
+        minDistance = distance;
+        nearestName = office.name;
+      }
+    }
+
+    _distanceFromNearestOffice = minDistance;
+    _nearestOfficeName = nearestName;
+    _isWithinOfficeRange =
+        (minDistance != null && minDistance <= maxCheckInDistanceMeters);
+
+    print(
+        '📍 Distance to nearest office ($nearestName): ${minDistance?.toStringAsFixed(0)}m');
+    print(
+        '📍 Within range: $_isWithinOfficeRange (max: ${maxCheckInDistanceMeters}m)');
+  }
+
+  /// Get formatted distance string
+  String get distanceMessage {
+    if (_distanceFromNearestOffice == null) return '';
+    final distance = _distanceFromNearestOffice!;
+    if (distance < 1000) {
+      return '${distance.toStringAsFixed(0)}m away';
+    }
+    return '${(distance / 1000).toStringAsFixed(1)}km away';
+  }
+
   /// Request location permission and get current position
   Future<bool> _getLocation() async {
     try {
@@ -345,6 +435,9 @@ class AttendanceViewModel extends BaseViewModel {
         _currentAddress = 'Location acquired';
       }
 
+      // Check proximity to office locations
+      _checkOfficeProximity();
+
       return true;
     } catch (e) {
       _errorMessage = 'Error getting location: $e';
@@ -355,6 +448,7 @@ class AttendanceViewModel extends BaseViewModel {
 
   /// Step 1: Verify location FIRST before allowing camera
   /// This must be called before capturePhoto() will work
+  /// GEOFENCING: Only allows check-in if within 150m of an approved office location
   Future<bool> verifyLocation() async {
     if (_isLocationVerified) return true;
 
@@ -366,15 +460,27 @@ class AttendanceViewModel extends BaseViewModel {
     try {
       final success = await _getLocation();
       if (success) {
+        // Check if user is within range of any office
+        if (!_isWithinOfficeRange) {
+          _isVerifyingLocation = false;
+          _errorMessage = '📍 You are not at an approved office location.\n\n'
+              'You are ${distanceMessage} from ${_nearestOfficeName ?? "the office"}.\n\n'
+              'Please go to one of our VGC offices (Road 2 or Road 7) '
+              'before checking in.';
+          _statusMessage = null;
+          rebuildUi();
+          return false;
+        }
+
         _isLocationVerified = true;
-        _statusMessage = 'Location verified: ${_currentAddress ?? 'Unknown'}';
-        print('📍 Location verified: $_currentAddress');
+        _statusMessage = '✓ Location verified: $_nearestOfficeName';
+        print('📍 Location verified: $_currentAddress ($_nearestOfficeName)');
       } else {
         _statusMessage = null;
       }
       _isVerifyingLocation = false;
       rebuildUi();
-      return success;
+      return success && _isWithinOfficeRange;
     } catch (e) {
       _isVerifyingLocation = false;
       _errorMessage = 'Failed to verify location: $e';

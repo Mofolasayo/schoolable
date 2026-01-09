@@ -176,12 +176,14 @@ class TasksView extends StackedView<TasksViewModel> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: TextField(
             onChanged: viewModel.setSearchQuery,
-            textAlign: TextAlign.center,
+            textAlignVertical: TextAlignVertical.center,
             decoration: const InputDecoration(
               hintText: 'Search tasks...',
               hintStyle: TextStyle(color: kcTextMutedColor, fontSize: 14),
               prefixIcon: Icon(Icons.search_rounded, color: kcTextMutedColor),
               border: InputBorder.none,
+              isDense: true,
+              contentPadding: EdgeInsets.zero,
             ),
           ),
         ),
