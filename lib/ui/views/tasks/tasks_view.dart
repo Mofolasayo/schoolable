@@ -167,6 +167,7 @@ class TasksView extends StackedView<TasksViewModel> {
     return Column(
       children: [
         Container(
+          height: 46,
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(14),
@@ -175,11 +176,11 @@ class TasksView extends StackedView<TasksViewModel> {
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: TextField(
             onChanged: viewModel.setSearchQuery,
-            decoration: InputDecoration(
+            textAlign: TextAlign.center,
+            decoration: const InputDecoration(
               hintText: 'Search tasks...',
-              hintStyle: const TextStyle(color: kcTextMutedColor, fontSize: 14),
-              prefixIcon:
-                  const Icon(Icons.search_rounded, color: kcTextMutedColor),
+              hintStyle: TextStyle(color: kcTextMutedColor, fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded, color: kcTextMutedColor),
               border: InputBorder.none,
             ),
           ),

@@ -182,7 +182,16 @@ class AttendanceViewModel extends BaseViewModel {
     rebuildUi();
   }
 
+  bool _isInitialized = false;
+  Timer? _pollingTimer;
+
   Future<void> initialize() async {
+    if (_isInitialized) {
+      // Already initialized - just do a silent refresh
+      _refreshSilently();
+      return;
+    }
+
     setBusy(true);
     try {
       // 1. Load cached data first for instant display
@@ -191,9 +200,38 @@ class AttendanceViewModel extends BaseViewModel {
       // 2. Fetch fresh data in background
       await _loadTodayStatus();
       await _loadRecentActivity();
+
+      // 3. Start silent polling
+      _startPolling();
+
+      _isInitialized = true;
     } finally {
       setBusy(false);
     }
+  }
+
+  /// Start silent polling (every 5 minutes)
+  void _startPolling() {
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(minutes: 5), (timer) {
+      _refreshSilently();
+    });
+  }
+
+  /// Refresh silently without loading state
+  Future<void> _refreshSilently() async {
+    try {
+      await _loadTodayStatus();
+      await _loadRecentActivity();
+    } catch (e) {
+      print('Error in silent refresh: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    super.dispose();
   }
 
   /// Load cached attendance data for instant display

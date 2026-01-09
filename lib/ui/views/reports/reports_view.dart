@@ -352,77 +352,188 @@ class ReportsView extends StackedView<ReportsViewModel> {
   Widget _buildTodayStatus(BuildContext context, ReportsViewModel viewModel) {
     final hasSubmitted = viewModel.hasSubmittedToday;
     final todayReport = viewModel.todayReport;
+    final isLate = viewModel.isLateSubmission;
 
+    if (hasSubmitted && todayReport != null) {
+      // Show submitted report status
+      return Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              kcTealColor.withOpacity(0.1),
+              kcTealColor.withOpacity(0.05)
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kcTealColor.withOpacity(0.3)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: kcTealColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: kcTealColor,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    '✓ Today\'s Report Submitted',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: kcTealColor,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'AI Score: ${todayReport['aiScore']?.toStringAsFixed(0) ?? '--'}%',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: kcTextMutedColor.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            GestureDetector(
+              onTap: () => _showReportDetail(context, todayReport),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: kcTealColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Text(
+                  'View',
+                  style: TextStyle(
+                    color: kcTealColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Show pending report - PROMINENT ACTION CARD
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: hasSubmitted
-              ? [kcTealColor.withOpacity(0.1), kcTealColor.withOpacity(0.05)]
-              : [kcAmberColor.withOpacity(0.1), kcAmberColor.withOpacity(0.05)],
+          colors: isLate
+              ? [kcRoseColor.withOpacity(0.15), kcRoseColor.withOpacity(0.08)]
+              : [
+                  kcAmberColor.withOpacity(0.15),
+                  kcAmberColor.withOpacity(0.08)
+                ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: hasSubmitted
-              ? kcTealColor.withOpacity(0.3)
-              : kcAmberColor.withOpacity(0.3),
+          color: isLate
+              ? kcRoseColor.withOpacity(0.4)
+              : kcAmberColor.withOpacity(0.4),
+          width: 1.5,
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: hasSubmitted
-                  ? kcTealColor.withOpacity(0.1)
-                  : kcAmberColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              hasSubmitted
-                  ? Icons.check_circle_rounded
-                  : Icons.pending_actions_rounded,
-              color: hasSubmitted ? kcTealColor : kcAmberColor,
-              size: 28,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isLate
+                      ? kcRoseColor.withOpacity(0.15)
+                      : kcAmberColor.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isLate
+                      ? Icons.warning_amber_rounded
+                      : Icons.edit_note_rounded,
+                  color: isLate ? kcRoseColor : kcAmberColor,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isLate ? '⚠️ Report Overdue!' : '📝 Report Pending',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                        color: isLate ? kcRoseColor : kcAmberColor,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      viewModel.timeRemainingToday,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: kcTextMutedColor.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'You haven\'t submitted your daily report yet. Share what you accomplished today to track your progress and boost your Aura score.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.4,
+              color: kcTextMutedColor.withOpacity(0.9),
             ),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  hasSubmitted ? 'Today\'s Report Submitted' : 'Pending Report',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: hasSubmitted ? kcTealColor : kcAmberColor,
-                  ),
+          const SizedBox(height: 16),
+          // Submit Button
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => _showSubmitReportSheet(context, viewModel),
+              icon: const Icon(Icons.add_circle_outline, size: 20),
+              label: const Text(
+                'Submit Today\'s Report',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isLate ? kcRoseColor : kcPrimaryColor,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  hasSubmitted
-                      ? 'AI Score: ${todayReport?['aiScore']?.toStringAsFixed(0) ?? '--'}%'
-                      : 'Submit your daily report to track progress',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: kcTextMutedColor.withOpacity(0.8),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          if (hasSubmitted && todayReport != null)
-            GestureDetector(
-              onTap: () => _showReportDetail(context, todayReport),
-              child: Icon(
-                Icons.arrow_forward_ios_rounded,
-                size: 18,
-                color: kcTealColor.withOpacity(0.7),
+                elevation: 0,
               ),
             ),
+          ),
         ],
       ),
     );
