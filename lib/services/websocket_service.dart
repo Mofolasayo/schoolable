@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 /// Message types for WebSocket communication
 enum WsMessageType {
@@ -45,7 +46,7 @@ typedef ConnectionCallback = void Function(bool connected);
 /// ```dart
 /// final ws = WebSocketService();
 /// await ws.connect(token);
-/// ws.subscribeToChannel(channelId, onMessage: (msg) => print(msg));
+/// ws.subscribeToChannel(channelId, onMessage: (msg) => debugPrint('$msg'));
 /// ws.sendMessage(channelId, 'Hello!');
 /// ```
 class WebSocketService {
@@ -67,6 +68,10 @@ class WebSocketService {
   final Set<MessageCallback> _notificationSubscriptions = {};
   final Set<ConnectionCallback> _connectionListeners = {};
 
+  void _log(String message) {
+    AppLogger.log(message);
+  }
+
   String get _baseWsUrl {
     final httpUrl = dotenv.env['BACKEND_URL'] ?? 'http://localhost:8081';
     // Convert http(s) to ws(s)
@@ -86,7 +91,7 @@ class WebSocketService {
 
     try {
       final wsUrl = '$_baseWsUrl/ws-native';
-      print('🔌 Connecting to WebSocket: $wsUrl');
+      _log('Connecting to WebSocket: $wsUrl');
 
       _channel = WebSocketChannel.connect(
         Uri.parse(wsUrl),
@@ -106,7 +111,7 @@ class WebSocketService {
       _isConnecting = false;
       _reconnectAttempts = 0;
 
-      print('✅ WebSocket connected');
+      _log('WebSocket connected');
       _notifyConnectionListeners(true);
 
       // Start listening
@@ -119,7 +124,7 @@ class WebSocketService {
       // Start heartbeat to keep connection alive
       _startHeartbeat();
     } catch (e) {
-      print('❌ WebSocket connection failed: $e');
+      _log('WebSocket connection failed: $e');
       _isConnecting = false;
       _scheduleReconnect();
     }
@@ -136,7 +141,7 @@ class WebSocketService {
     _channel = null;
     _token = null;
 
-    print('🔌 WebSocket disconnected');
+    _log('WebSocket disconnected');
     _notifyConnectionListeners(false);
   }
 
@@ -154,7 +159,7 @@ class WebSocketService {
       });
     }
 
-    print('📢 Subscribed to channel: $channelId');
+    _log('Subscribed to channel: $channelId');
   }
 
   /// Unsubscribe from a channel
@@ -191,6 +196,11 @@ class WebSocketService {
     _notificationSubscriptions.add(onNotification);
   }
 
+  /// Unsubscribe from private notifications
+  void unsubscribeFromNotifications(MessageCallback callback) {
+    _notificationSubscriptions.remove(callback);
+  }
+
   /// Add connection state listener
   void addConnectionListener(ConnectionCallback callback) {
     _connectionListeners.add(callback);
@@ -204,7 +214,7 @@ class WebSocketService {
   /// Send a chat message
   void sendMessage(String channelId, String content) {
     if (!_isConnected) {
-      print('⚠️ Cannot send message: not connected');
+      _log('Cannot send message: not connected');
       return;
     }
 
@@ -262,20 +272,20 @@ class WebSocketService {
           _handleNotification(data);
           break;
         case 'AUTH_SUCCESS':
-          print('✅ WebSocket authentication successful');
+          _log('WebSocket authentication successful');
           break;
         case 'AUTH_FAILED':
-          print('❌ WebSocket authentication failed');
+          _log('WebSocket authentication failed');
           disconnect();
           break;
         case 'PONG':
           // Heartbeat response
           break;
         default:
-          print('⚠️ Unknown message type: $type');
+          _log('Unknown message type: $type');
       }
     } catch (e) {
-      print('❌ Error parsing WebSocket message: $e');
+      _log('Error parsing WebSocket message: $e');
     }
   }
 
@@ -319,14 +329,14 @@ class WebSocketService {
   }
 
   void _handleError(dynamic error) {
-    print('❌ WebSocket error: $error');
+    _log('WebSocket error: $error');
     _isConnected = false;
     _notifyConnectionListeners(false);
     _scheduleReconnect();
   }
 
   void _handleDisconnect() {
-    print('🔌 WebSocket connection closed');
+    _log('WebSocket connection closed');
     _isConnected = false;
     _notifyConnectionListeners(false);
     _scheduleReconnect();
@@ -334,15 +344,15 @@ class WebSocketService {
 
   void _scheduleReconnect() {
     if (_token == null || _reconnectAttempts >= _maxReconnectAttempts) {
-      print('⚠️ Max reconnect attempts reached or no token');
+      _log('Max reconnect attempts reached or no token');
       return;
     }
 
     _reconnectAttempts++;
     final delay = _reconnectDelay * _reconnectAttempts;
 
-    print(
-        '🔄 Scheduling reconnect in ${delay.inSeconds}s (attempt $_reconnectAttempts)');
+    _log(
+        'Scheduling reconnect in ${delay.inSeconds}s (attempt $_reconnectAttempts)');
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, () {

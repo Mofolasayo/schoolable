@@ -5,6 +5,7 @@ import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/services/cache_service.dart';
 import 'package:schoolable/services/websocket_service.dart';
 import 'package:schoolable/ui/views/tasks/task_model.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 class KpiCard {
   KpiCard({required this.label, required this.value, required this.trend});
@@ -12,20 +13,6 @@ class KpiCard {
   final String label;
   final String value;
   final String trend;
-}
-
-class ChatMessage {
-  ChatMessage({
-    required this.sender,
-    required this.time,
-    required this.text,
-    required this.isMe,
-  });
-
-  final String sender;
-  final String time;
-  final String text;
-  final bool isMe;
 }
 
 class Announcement {
@@ -63,6 +50,8 @@ class ComplianceItem {
     required this.deadline,
     required this.type,
     this.status = 'pending',
+    this.policyFileUrl,
+    this.policyFileName,
   });
 
   final String id;
@@ -70,7 +59,9 @@ class ComplianceItem {
   final String description;
   final DateTime deadline;
   final String type; // 'policy', 'upload', 'training'
-  String status; // 'pending', 'complied'
+  String status; // 'pending', 'submitted', 'approved', 'rejected'
+  final String? policyFileUrl;
+  final String? policyFileName;
 }
 
 /// Aura Performance Score Data (Auto-calculated with Department KPIs)
@@ -165,7 +156,6 @@ class PillarDetail {
   }
 }
 
-/// Sub-metric detail for enhanced Aura display
 class SubMetricDetail {
   SubMetricDetail({
     required this.key,
@@ -243,6 +233,7 @@ class TeamInsightData {
     this.needsAttention = const [],
     this.recommendations = const [],
     this.riskAlerts = const [],
+    this.generationStatus,
   });
 
   final int weekNumber;
@@ -254,6 +245,7 @@ class TeamInsightData {
   final List<String> needsAttention;
   final List<String> recommendations;
   final List<String> riskAlerts;
+  final String? generationStatus;
 
   factory TeamInsightData.fromMap(Map<String, dynamic> map) {
     // Parse nested insights
@@ -278,6 +270,7 @@ class TeamInsightData {
       needsAttention: toStringList(insights['needsAttention']),
       recommendations: toStringList(recs['items']),
       riskAlerts: toStringList(risks['items']),
+      generationStatus: map['generationStatus']?.toString(),
     );
   }
 }
@@ -333,12 +326,11 @@ class HomeViewModel extends IndexTrackingViewModel {
   final _cacheService = locator<CacheService>();
   final _wsService = locator<WebSocketService>();
   Timer? _timer;
-  StreamSubscription? _taskSubscription;
-
-  // Debounce timers to prevent excessive API calls
   Timer? _taskDebounce;
   Timer? _auraDebounce;
   Timer? _announcementDebounce;
+  Timer? _complianceDebounce;
+  MessageCallback? _notificationHandler;
 
   String? userName;
   String? userRole;
@@ -353,6 +345,7 @@ class HomeViewModel extends IndexTrackingViewModel {
   // Aura Performance Data
   AuraData? auraData;
   bool isLoadingAura = false;
+  bool auraLoadFailed = false;
 
   // Team Score & AI Insights
   TeamScoreData? teamScore;
@@ -396,25 +389,21 @@ class HomeViewModel extends IndexTrackingViewModel {
     _fetchTaskRatingStatus(); // Check if task ratings needed
 
     _connectWebSocket();
-
     _startPolling();
   }
 
   Future<void> _connectWebSocket() async {
     try {
-      // Get the auth token
       final token = await _backendService.getCurrentToken();
       if (token == null) {
-        print('⚠️ No token available for WebSocket connection');
+        AppLogger.log('⚠️ No token available for WebSocket connection');
         return;
       }
 
       await _wsService.connect(token);
 
-      // Subscribe to notifications for task/announcement updates
-      _wsService.subscribeToNotifications(onNotification: (message) {
-        print('📥 Received notification via WebSocket: ${message.type}');
-        // Check notification type and refresh accordingly - DEBOUNCED
+      _notificationHandler ??= (message) {
+        AppLogger.log('📥 Received notification via WebSocket: ${message.type}');
         final notificationType =
             message.data['notificationType']?.toString() ?? '';
         if (notificationType.contains('task')) {
@@ -422,21 +411,26 @@ class HomeViewModel extends IndexTrackingViewModel {
           _fetchAuraDebounced();
         } else if (notificationType.contains('announcement')) {
           _fetchAnnouncementsDebounced();
+        } else if (notificationType.contains('compliance')) {
+          _fetchComplianceDebounced();
         } else if (notificationType.contains('attendance')) {
           _fetchAuraDebounced();
         } else {
-          // Refresh all for general notifications - debounced
           _fetchTasksDebounced();
           _fetchAnnouncementsDebounced();
           _fetchAuraDebounced();
+          _fetchComplianceDebounced();
         }
-      });
+      };
+
+      _wsService.subscribeToNotifications(
+        onNotification: _notificationHandler!,
+      );
     } catch (e) {
-      print('⚠️ WebSocket connection failed: $e');
+      AppLogger.log('⚠️ WebSocket connection failed: $e');
     }
   }
 
-  /// Debounced task fetching - prevents excessive API calls
   void _fetchTasksDebounced() {
     _taskDebounce?.cancel();
     _taskDebounce = Timer(const Duration(milliseconds: 500), () {
@@ -444,7 +438,6 @@ class HomeViewModel extends IndexTrackingViewModel {
     });
   }
 
-  /// Debounced Aura data fetching
   void _fetchAuraDebounced() {
     _auraDebounce?.cancel();
     _auraDebounce = Timer(const Duration(milliseconds: 500), () {
@@ -452,11 +445,17 @@ class HomeViewModel extends IndexTrackingViewModel {
     });
   }
 
-  /// Debounced announcement fetching
   void _fetchAnnouncementsDebounced() {
     _announcementDebounce?.cancel();
     _announcementDebounce = Timer(const Duration(milliseconds: 500), () {
       _fetchAnnouncements();
+    });
+  }
+
+  void _fetchComplianceDebounced() {
+    _complianceDebounce?.cancel();
+    _complianceDebounce = Timer(const Duration(milliseconds: 500), () {
+      _fetchComplianceItems();
     });
   }
 
@@ -484,21 +483,25 @@ class HomeViewModel extends IndexTrackingViewModel {
   }
 
   void _startPolling() {
-    // Reduce polling frequency since WebSocket handles real-time updates
-    _timer = Timer.periodic(const Duration(minutes: 5), (timer) {
+    // Light polling as a fallback alongside WebSocket updates.
+    _timer = Timer.periodic(const Duration(minutes: 1), (timer) {
       _fetchAnnouncements();
       _fetchTasks();
+      _fetchComplianceItems();
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _taskSubscription?.cancel();
-    // Cancel debounce timers
     _taskDebounce?.cancel();
     _auraDebounce?.cancel();
     _announcementDebounce?.cancel();
+    _complianceDebounce?.cancel();
+    if (_notificationHandler != null) {
+      _wsService.unsubscribeFromNotifications(_notificationHandler!);
+      _notificationHandler = null;
+    }
     super.dispose();
   }
 
@@ -513,6 +516,10 @@ class HomeViewModel extends IndexTrackingViewModel {
     ]);
   }
 
+  Future<void> refreshCompliance() async {
+    await _fetchComplianceItems();
+  }
+
   /// Fetch Auto-calculated Aura performance data from backend
   /// Uses department-specific KPIs for real-time calculation
   Future<void> _fetchAuraData() async {
@@ -521,12 +528,13 @@ class HomeViewModel extends IndexTrackingViewModel {
       rebuildUi();
     }
 
+    auraLoadFailed = false;
     try {
       // Use auto-aura endpoint for real-time calculation with department KPIs
       final data = await _backendService.getAutoAuraDashboard();
       if (data != null) {
         auraData = AuraData.fromMap(data);
-        print(
+        AppLogger.log(
             '✅ Auto-Aura loaded: ${auraData?.auraScore} (${auraData?.departmentProfile})');
       } else {
         // Fallback to standard endpoint if auto fails
@@ -534,13 +542,14 @@ class HomeViewModel extends IndexTrackingViewModel {
         if (fallbackData != null) {
           auraData = AuraData.fromMap(fallbackData);
         } else {
-          _setDemoAuraData();
+          auraData = null;
+          auraLoadFailed = true;
         }
       }
     } catch (e) {
-      print('Error fetching Aura data: $e');
-      // Use demo data on any error
-      _setDemoAuraData();
+      AppLogger.log('Error fetching Aura data: $e');
+      auraData = null;
+      auraLoadFailed = true;
     } finally {
       isLoadingAura = false;
       rebuildUi();
@@ -559,7 +568,7 @@ class HomeViewModel extends IndexTrackingViewModel {
       final scoreData = await _backendService.getMyTeamScore();
       if (scoreData != null && scoreData['overallTeamScore'] != null) {
         teamScore = TeamScoreData.fromMap(scoreData);
-        print(
+        AppLogger.log(
             '✅ Team Score loaded: ${teamScore?.overallScore} (${teamScore?.grade})');
       }
 
@@ -567,10 +576,10 @@ class HomeViewModel extends IndexTrackingViewModel {
       final insightData = await _backendService.getTeamInsight();
       if (insightData != null && insightData['kpiScore'] != null) {
         teamInsight = TeamInsightData.fromMap(insightData);
-        print('✅ Team Insight loaded: Week ${teamInsight?.weekNumber}');
+        AppLogger.log('✅ Team Insight loaded: Week ${teamInsight?.weekNumber}');
       }
     } catch (e) {
-      print('Error fetching team data: $e');
+      AppLogger.log('Error fetching team data: $e');
       // Keep null on error - UI will show fallback
     } finally {
       isLoadingTeamData = false;
@@ -593,11 +602,11 @@ class HomeViewModel extends IndexTrackingViewModel {
         myKpiAverageAchievement =
             (response['averageAchievement'] as num?)?.toDouble() ?? 0;
         myKpiTotalWeight = (response['totalWeight'] as num?)?.toInt() ?? 0;
-        print(
+        AppLogger.log(
             '✅ Individual KPIs loaded: ${myKpis.length} KPIs, avg: $myKpiAverageAchievement%');
       }
     } catch (e) {
-      print('Error fetching individual KPIs: $e');
+      AppLogger.log('Error fetching individual KPIs: $e');
       myKpis = [];
     } finally {
       isLoadingMyKpis = false;
@@ -630,12 +639,16 @@ class HomeViewModel extends IndexTrackingViewModel {
           deadline: deadline,
           type: item['type'] ?? 'policy',
           status: item['status'] ?? 'pending',
+          policyFileUrl: item['fileUrl']?.toString() ??
+              item['policyFileUrl']?.toString(),
+          policyFileName: item['fileName']?.toString() ??
+              item['policyFileName']?.toString(),
         );
       }).toList();
 
       rebuildUi();
     } catch (e) {
-      print('Error fetching compliance items: $e');
+      AppLogger.log('Error fetching compliance items: $e');
       // Keep empty list on error
       complianceItems = [];
       rebuildUi();
@@ -655,7 +668,7 @@ class HomeViewModel extends IndexTrackingViewModel {
 
       rebuildUi();
     } catch (e) {
-      print('Error fetching peer helpfulness status: $e');
+      AppLogger.log('Error fetching peer helpfulness status: $e');
       hasPendingPeerRatings = false;
       pendingPeerRatingsCount = 0;
     }
@@ -674,189 +687,11 @@ class HomeViewModel extends IndexTrackingViewModel {
 
       rebuildUi();
     } catch (e) {
-      print('Error fetching task rating status: $e');
+      AppLogger.log('Error fetching task rating status: $e');
       hasPendingTaskRatings = false;
       pendingTaskRatingsCount = 0;
       pendingTaskRatings = [];
     }
-  }
-
-  /// Set placeholder Aura data for display when API is unavailable
-  /// Shows 0 score to avoid misleading users
-  /// 4 pillars × 25% each
-  void _setDemoAuraData() {
-    auraData = AuraData(
-      auraScore: 0.0,
-      grade: 'N/A',
-      qgpa: 0.0,
-      pillars: {
-        'technical': PillarDetail(
-          name: 'Technical Competence',
-          score: 0.0,
-          weight: 25.0,
-          contribution: 0.0,
-          dataSource: 'auto',
-          subMetrics: [
-            SubMetricDetail(
-              key: 'task_completion_rate',
-              displayName: 'Task Completion Rate',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'on_time_delivery',
-              displayName: 'On-Time Delivery',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'task_quality',
-              displayName: 'Task Quality',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'documentation',
-              displayName: 'Documentation',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-          ],
-        ),
-        'behavioral': PillarDetail(
-          name: 'Behavioral Competence',
-          score: 0.0,
-          weight: 25.0,
-          contribution: 0.0,
-          dataSource: 'mixed',
-          subMetrics: [
-            SubMetricDetail(
-              key: 'attendance_rate',
-              displayName: 'Attendance Rate',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 30.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'punctuality',
-              displayName: 'Punctuality',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'consistency',
-              displayName: 'Work Consistency',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 20.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'initiative',
-              displayName: 'Initiative',
-              score: 0.0,
-              source: 'team_lead',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-          ],
-        ),
-        'cultureFit': PillarDetail(
-          name: 'Culture Fit',
-          score: 0.0,
-          weight: 25.0,
-          contribution: 0.0,
-          dataSource: 'mixed',
-          subMetrics: [
-            SubMetricDetail(
-              key: 'policy_compliance',
-              displayName: 'Policy Compliance',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 35.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'training_compliance',
-              displayName: 'Training Compliance',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 30.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'zero_violations',
-              displayName: 'Zero HR Violations',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 20.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'attitude',
-              displayName: 'Attitude',
-              score: 0.0,
-              source: 'team_lead',
-              weightInPillar: 15.0,
-              contribution: 0.0,
-            ),
-          ],
-        ),
-        'growthLearning': PillarDetail(
-          name: 'Growth & Learning',
-          score: 0.0,
-          weight: 25.0,
-          contribution: 0.0,
-          dataSource: 'auto',
-          subMetrics: [
-            SubMetricDetail(
-              key: 'training_hours',
-              displayName: 'Training Participation',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'certifications',
-              displayName: 'Certifications Earned',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'improvement_trend',
-              displayName: 'Score Improvement',
-              score: 0.0,
-              source: 'auto',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-            SubMetricDetail(
-              key: 'skill_application',
-              displayName: 'Skills Applied',
-              score: 0.0,
-              source: 'team_lead',
-              weightInPillar: 25.0,
-              contribution: 0.0,
-            ),
-          ],
-        ),
-      },
-      quarterStart: 'Awaiting data...',
-    );
   }
 
   /// Apply profile data to view model properties
@@ -903,7 +738,7 @@ class HomeViewModel extends IndexTrackingViewModel {
       announcements = _parseAnnouncements(data);
       rebuildUi();
     } catch (e) {
-      print('Error loading announcements: $e');
+      AppLogger.log('Error loading announcements: $e');
     }
   }
 
@@ -958,7 +793,7 @@ class HomeViewModel extends IndexTrackingViewModel {
         ));
       }
     } catch (e) {
-      print('Error fetching notifications: $e');
+      AppLogger.log('Error fetching notifications: $e');
       // Continue with just announcements if notifications fail
     }
 
@@ -992,7 +827,16 @@ class HomeViewModel extends IndexTrackingViewModel {
     rebuildUi();
 
     // 2. Call Backend API
-    await _backendService.markAnnouncementAsRead(announcement.id);
+    if (announcement.id.startsWith('notif_')) {
+      final rawId = announcement.id.replaceFirst('notif_', '');
+      final notifId = int.tryParse(rawId);
+      if (notifId != null) {
+        await _backendService.markNotificationAsRead(notifId);
+      }
+    } else {
+      await _backendService.markAnnouncementAsRead(announcement.id);
+    }
+    await _fetchAnnouncements();
 
     // 3. Update cache
     await _cacheService.cacheAnnouncements(
@@ -1012,7 +856,7 @@ class HomeViewModel extends IndexTrackingViewModel {
       tasks = data.map((e) => Task.fromMap(e)).toList();
       rebuildUi();
     } catch (e) {
-      print('Error loading tasks: $e');
+      AppLogger.log('Error loading tasks: $e');
     }
   }
 
@@ -1031,7 +875,7 @@ class HomeViewModel extends IndexTrackingViewModel {
         _applyProfileData(profile);
       }
     } catch (e) {
-      print('Error loading profile: $e');
+      AppLogger.log('Error loading profile: $e');
     } finally {
       if (userName == null) {
         setBusy(false);
@@ -1080,6 +924,7 @@ class HomeViewModel extends IndexTrackingViewModel {
     // Team Score: Show actual value or '--' if no data
     String teamScoreDisplay;
     String teamGrade = '';
+    String teamLabel = 'Team Score';
     if (teamScore != null) {
       teamScoreDisplay = '${teamScore!.overallScore.round()}%';
       teamGrade = teamScore!.grade;
@@ -1093,25 +938,64 @@ class HomeViewModel extends IndexTrackingViewModel {
       KpiCard(label: 'Task Score', value: taskScoreValue, trend: '--'),
       KpiCard(label: 'Attendance', value: attendanceValue, trend: '--'),
       KpiCard(label: 'Compliance', value: complianceValue, trend: '--'),
-      KpiCard(label: 'Team Score', value: teamScoreDisplay, trend: teamGrade),
+      KpiCard(label: teamLabel, value: teamScoreDisplay, trend: teamGrade),
     ];
   }
 
   // Use real tasks instead of mock
-  List<Task> get todayTasks => tasks;
+  List<Task> get todayTasks {
+    final active = <Task>[];
+    final completed = <Task>[];
+    for (final task in tasks) {
+      if (_isCompletedStatus(task.status)) {
+        completed.add(task);
+      } else {
+        active.add(task);
+      }
+    }
+    return [...active, ...completed];
+  }
+
+  bool isTaskCompleted(String status) => _isCompletedStatus(status);
+
+  void updateTask(Task updatedTask) {
+    final index = tasks.indexWhere((task) => task.id == updatedTask.id);
+    if (index == -1) {
+      return;
+    }
+    final updated = List<Task>.from(tasks);
+    updated[index] = updatedTask;
+    tasks = updated;
+    rebuildUi();
+  }
 
   // Task distribution computed properties
+  bool _isCompletedStatus(String status) {
+    final normalized = status.trim().toLowerCase();
+    return normalized == 'completed' || normalized == 'done';
+  }
+
+  bool _isPendingStatus(String status) {
+    final normalized = status.trim().toLowerCase();
+    return normalized == 'pending' ||
+        normalized == 'todo' ||
+        normalized == 'in progress' ||
+        normalized == 'in_progress' ||
+        normalized == 'review';
+  }
+
   int get completedTaskCount =>
-      tasks.where((t) => t.status.toLowerCase() == 'completed').length;
+      tasks.where((t) => _isCompletedStatus(t.status)).length;
 
-  int get pendingTaskCount => tasks
-      .where((t) =>
-          t.status.toLowerCase() == 'pending' ||
-          t.status.toLowerCase() == 'in progress')
-      .length;
+  int get pendingTaskCount =>
+      tasks.where((t) => _isPendingStatus(t.status)).length;
 
-  int get overdueTaskCount =>
-      tasks.where((t) => t.due.toLowerCase() == 'overdue').length;
+  int get overdueTaskCount {
+    return tasks.where((t) {
+      final due = t.due.trim().toLowerCase();
+      return due == 'overdue' || t.status.trim().toLowerCase() == 'overdue';
+    }).length;
+  }
 
   int get totalTaskCount => tasks.length;
 
@@ -1131,27 +1015,6 @@ class HomeViewModel extends IndexTrackingViewModel {
       overdue > 0 ? (overdue < 5 ? 5 : overdue) : 0,
     ];
   }
-
-  final chatMessages = <ChatMessage>[
-    ChatMessage(
-      sender: 'Deborah',
-      time: '09:14',
-      text: 'Reminder: maintenance Sat 2AM',
-      isMe: false,
-    ),
-    ChatMessage(
-      sender: 'You',
-      time: '09:16',
-      text: 'Copy, will notify ops.',
-      isMe: true,
-    ),
-    ChatMessage(
-      sender: 'Darlington',
-      time: '09:20',
-      text: 'Drafting announcement now.',
-      isMe: false,
-    ),
-  ];
 
   void setTab(int index) {
     setIndex(index);

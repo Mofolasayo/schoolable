@@ -21,58 +21,93 @@ class TasksView extends StackedView<TasksViewModel> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
+              _buildHeader(context, viewModel),
               const SizedBox(height: 20),
               _buildMetrics(viewModel),
-              const SizedBox(height: 20),
-              _buildSearchAndFilters(viewModel),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+
               Expanded(
-                child: viewModel.isBusy
-                    ? const Center(child: CupertinoActivityIndicator())
-                    : viewModel.tasks.isEmpty
-                        ? CustomScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            slivers: [
-                              CupertinoSliverRefreshControl(
-                                  onRefresh: viewModel.fetchTasks),
-                              const SliverFillRemaining(
-                                child: Center(child: Text('No tasks found')),
-                              ),
-                            ],
-                          )
-                        : CustomScrollView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            slivers: [
-                              CupertinoSliverRefreshControl(
-                                  onRefresh: viewModel.fetchTasks),
-                              SliverList(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) {
-                                    final task = viewModel.tasks[index];
-                                    return Padding(
-                                      padding:
-                                          const EdgeInsets.only(bottom: 12),
-                                      child: _TaskCard(
-                                        task: task,
-                                        onTap: () async {
-                                          await Navigator.of(context).push(
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  TaskDetailView(task: task),
-                                            ),
-                                          );
-                                          // Refresh on return
-                                          viewModel.fetchTasks();
-                                        },
-                                      ),
-                                    );
-                                  },
-                                  childCount: viewModel.tasks.length,
-                                ),
-                              ),
-                            ],
-                          ),
+                child: CustomScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: [
+                    CupertinoSliverRefreshControl(
+                        onRefresh: viewModel.fetchTasks),
+                    if (viewModel.isBusy && viewModel.tasks.isEmpty)
+                      const SliverFillRemaining(
+                        child: Center(child: CupertinoActivityIndicator()),
+                      )
+                    else if (viewModel.tasks.isEmpty)
+                      const SliverFillRemaining(
+                        child: Center(child: Text('No tasks found')),
+                      )
+                    else
+                      Builder(
+                        builder: (context) {
+                          final tasks = viewModel.tasks;
+                          final completedIndex =
+                              tasks.indexWhere(viewModel.isTaskCompleted);
+                          final showCompletedHeader = completedIndex != -1;
+                          final itemCount =
+                              tasks.length + (showCompletedHeader ? 1 : 0);
+
+                          return SliverList(
+                            delegate: SliverChildBuilderDelegate(
+                              (context, index) {
+                                if (showCompletedHeader &&
+                                    index == completedIndex) {
+                                  return _CompletedTasksHeader(
+                                      withTopPadding: completedIndex > 0);
+                                }
+
+                                final taskIndex = showCompletedHeader &&
+                                        index > completedIndex
+                                    ? index - 1
+                                    : index;
+                                final task = tasks[taskIndex];
+                                final statusLabel =
+                                    viewModel.getStatusLabel(task);
+                                final isOverdue = viewModel.isTaskOverdue(task);
+                                final isInProgress =
+                                    viewModel.isTaskInProgress(task);
+                                final isCompleted =
+                                    viewModel.isTaskCompleted(task);
+
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _TaskCard(
+                                    task: task,
+                                    statusLabel: statusLabel,
+                                    isOverdue: isOverdue,
+                                    isInProgress: isInProgress,
+                                    isCompleted: isCompleted,
+                                    isCompleting:
+                                        viewModel.isCompleting(task.id),
+                                    onQuickComplete: () =>
+                                        viewModel.quickCompleteTask(task),
+                                    onTap: () async {
+                                      await Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => TaskDetailView(
+                                            task: task,
+                                            onTaskUpdated:
+                                                viewModel.updateTask,
+                                          ),
+                                        ),
+                                      );
+                                      // Refresh on return
+                                      viewModel.fetchTasks();
+                                    },
+                                  ),
+                                );
+                              },
+                              childCount: itemCount,
+                            ),
+                          );
+                        },
+                      ),
+                    const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
+                  ],
+                ),
               ),
             ],
           ),
@@ -87,15 +122,15 @@ class TasksView extends StackedView<TasksViewModel> {
   @override
   void onViewModelReady(TasksViewModel viewModel) => viewModel.initialize();
 
-  Widget _buildHeader() {
-    return const Row(
+  Widget _buildHeader(BuildContext context, TasksViewModel viewModel) {
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
+        const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Task Management',
+              'Tasks',
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.w600,
@@ -104,7 +139,7 @@ class TasksView extends StackedView<TasksViewModel> {
             ),
             SizedBox(height: 4),
             Text(
-              'Track your assigned tasks',
+              'Your workstream at a glance',
               style: TextStyle(
                 fontSize: 13,
                 color: kcTextMutedColor,
@@ -112,103 +147,146 @@ class TasksView extends StackedView<TasksViewModel> {
             ),
           ],
         ),
-        // Container(
-        //   padding: const EdgeInsets.all(8),
-        //   decoration: BoxDecoration(
-        //     color: Colors.white,
-        //     borderRadius: BorderRadius.circular(12),
-        //     border: Border.all(color: kcBorderColor),
-        //   ),
-        //   child:
-        //       const Icon(Icons.more_horiz, color: kcTextMutedColor, size: 20),
-        // ),
+        Row(
+          children: [
+            _HeaderIconButton(
+              icon: Icons.search_rounded,
+              onTap: () => _openSearchPage(context, viewModel),
+            ),
+            const SizedBox(width: 10),
+            _HeaderIconButton(
+              icon: Icons.tune_rounded,
+              onTap: () => _showStatusFilterSheet(context, viewModel),
+            ),
+          ],
+        ),
       ],
     );
   }
 
   Widget _buildMetrics(TasksViewModel viewModel) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _MetricCard(
-            label: 'Total Tasks',
-            value: viewModel.totalCount.toString(),
-            icon: Icons.access_time,
-            color: kcPrimaryColor,
-          ),
-          const SizedBox(width: 12),
-          _MetricCard(
-            label: 'In Progress',
-            value: viewModel.inProgressCount.toString(),
-            icon: Icons.access_time,
-            color: Colors.blue,
-          ),
-          const SizedBox(width: 12),
-          _MetricCard(
-            label: 'Completed',
-            value: viewModel.completedCount.toString(),
-            icon: Icons.check_circle_outline,
-            color: Colors.green,
-          ),
-          const SizedBox(width: 12),
-          _MetricCard(
-            label: 'Overdue',
-            value: viewModel.overdueCount.toString(),
-            icon: Icons.error_outline,
-            color: Colors.red,
-          ),
-        ],
+    return Wrap(
+      spacing: 10,
+      runSpacing: 5,
+      children: [
+        _MetricCard(
+          label: 'All',
+          value: viewModel.totalCount.toString(),
+          icon: Icons.circle,
+          color: kcPrimaryColor,
+        ),
+        _MetricCard(
+          label: 'In progress',
+          value: viewModel.inProgressCount.toString(),
+          icon: Icons.circle,
+          color: Colors.blue,
+        ),
+       
+        _MetricCard(
+          label: 'Overdue',
+          value: viewModel.overdueCount.toString(),
+          icon: Icons.circle,
+          color: kcRoseColor,
+        ),
+         _MetricCard(
+          label: 'Done',
+          value: viewModel.completedCount.toString(),
+          icon: Icons.circle,
+          color: Colors.green,
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openSearchPage(
+      BuildContext context, TasksViewModel viewModel) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _TaskSearchView(viewModel: viewModel),
       ),
     );
   }
 
-  Widget _buildSearchAndFilters(TasksViewModel viewModel) {
-    return Column(
-      children: [
-        Container(
-          height: 46,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: kcBorderColor),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          child: TextField(
-            onChanged: viewModel.setSearchQuery,
-            textAlignVertical: TextAlignVertical.center,
-            decoration: const InputDecoration(
-              hintText: 'Search tasks...',
-              hintStyle: TextStyle(color: kcTextMutedColor, fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: kcTextMutedColor),
-              border: InputBorder.none,
-              isDense: true,
-              contentPadding: EdgeInsets.zero,
+  Future<void> _showStatusFilterSheet(
+      BuildContext context, TasksViewModel viewModel) async {
+    final segments = viewModel.primaryStatusSegments;
+    if (segments.isEmpty) return;
+    var selectedValue = segments.any(
+            (segment) => segment['value'] == viewModel.filterStatus)
+        ? viewModel.filterStatus
+        : segments.first['value'] ?? viewModel.filterStatus;
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) => Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: kcSurfaceColor,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
             ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              const Text('Status:',
-                  style: TextStyle(fontSize: 12, color: kcTextMutedColor)),
-              const SizedBox(width: 8),
-              ...['All', 'Pending', 'In Progress', 'Completed', 'Overdue'].map(
-                (status) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: _FilterChip(
-                    label: status,
-                    isSelected: viewModel.filterStatus == status,
-                    onTap: () => viewModel.setFilterStatus(status),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Filter by status',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: kcTextColor,
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                ...segments.map((segment) {
+                  final value = segment['value'] ?? '';
+                  final label = segment['label'] ?? value;
+                  return RadioListTile<String>(
+                    value: value,
+                    groupValue: selectedValue,
+                    dense: true,
+                    activeColor: kcPrimaryColor,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      label,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: kcTextColor,
+                      ),
+                    ),
+                    onChanged: (next) {
+                      if (next == null) return;
+                      setState(() => selectedValue = next);
+                    },
+                  );
+                }),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      viewModel.setFilterStatus(selectedValue);
+                      Navigator.of(context).pop();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: kcPrimaryColor,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Apply'),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }
@@ -229,37 +307,31 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 140,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: kcSurfaceColor,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: kcBorderColor),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  color: kcTextMutedColor,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              Icon(icon, size: 16, color: color),
-            ],
+          Icon(icon, size: 10, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: kcTextMutedColor,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(width: 6),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
               color: kcTextColor,
             ),
           ),
@@ -269,48 +341,255 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({required this.icon, required this.onTap});
 
-  final String label;
-  final bool isSelected;
+  final IconData icon;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        width: 40,
+        height: 40,
         decoration: BoxDecoration(
-          color: isSelected ? kcPrimaryColor : Colors.transparent,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? kcPrimaryColor : kcBorderColor,
-          ),
+          color: kcSurfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: kcBorderColor),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : kcTextMutedColor,
-          ),
+        child: Icon(icon, size: 20, color: kcTextMutedColor),
+      ),
+    );
+  }
+}
+
+class _CompletedTasksHeader extends StatelessWidget {
+  const _CompletedTasksHeader({this.withTopPadding = true});
+
+  final bool withTopPadding;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(top: withTopPadding ? 12 : 0, bottom: 4),
+      child: const Text(
+        'Completed tasks',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: kcTextMutedColor,
+          letterSpacing: 0.3,
         ),
       ),
     );
   }
 }
 
+class _TaskSearchView extends StatefulWidget {
+  const _TaskSearchView({required this.viewModel});
+
+  final TasksViewModel viewModel;
+
+  @override
+  State<_TaskSearchView> createState() => _TaskSearchViewState();
+}
+
+class _TaskSearchViewState extends State<_TaskSearchView> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.viewModel.searchQuery);
+    _controller.addListener(() {
+      widget.viewModel.setSearchQuery(_controller.text);
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kcBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Search tasks',
+          style: TextStyle(
+            color: kcTextColor,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: kcTextColor),
+      ),
+      body: AnimatedBuilder(
+        animation: widget.viewModel,
+        builder: (context, _) {
+          final results = widget.viewModel.tasks;
+          return Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  textAlignVertical: TextAlignVertical.center,
+                  decoration: InputDecoration(
+                    hintText: 'Search tasks...',
+                    hintStyle:
+                        const TextStyle(color: kcTextMutedColor, fontSize: 14),
+                    prefixIcon: const Icon(Icons.search_rounded,
+                        color: kcTextMutedColor),
+                    suffixIcon: _controller.text.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.close_rounded,
+                                color: kcTextMutedColor),
+                            onPressed: () {
+                              _controller.clear();
+                              widget.viewModel.setSearchQuery('');
+                            },
+                          ),
+                    border: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(14)),
+                      borderSide: BorderSide(color: kcBorderColor),
+                    ),
+                    enabledBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(14)),
+                      borderSide: BorderSide(color: kcBorderColor),
+                    ),
+                    focusedBorder: const OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(14)),
+                      borderSide: BorderSide(color: kcPrimaryColor),
+                    ),
+                    isDense: true,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  '${results.length} match${results.length == 1 ? '' : 'es'}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: kcTextMutedColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: results.isEmpty
+                      ? const Center(
+                          child: Text(
+                            'No matching tasks',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: kcTextMutedColor,
+                            ),
+                          ),
+                        )
+                      : Builder(
+                          builder: (context) {
+                            final completedIndex = results.indexWhere(
+                                widget.viewModel.isTaskCompleted);
+                            final showCompletedHeader = completedIndex != -1;
+                            final itemCount = results.length +
+                                (showCompletedHeader ? 1 : 0);
+
+                            return ListView.separated(
+                              itemCount: itemCount,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 12),
+                              itemBuilder: (context, index) {
+                                if (showCompletedHeader &&
+                                    index == completedIndex) {
+                                  return _CompletedTasksHeader(
+                                      withTopPadding: completedIndex > 0);
+                                }
+
+                                final taskIndex = showCompletedHeader &&
+                                        index > completedIndex
+                                    ? index - 1
+                                    : index;
+                                final task = results[taskIndex];
+                                final statusLabel =
+                                    widget.viewModel.getStatusLabel(task);
+                                final isOverdue =
+                                    widget.viewModel.isTaskOverdue(task);
+                                final isInProgress =
+                                    widget.viewModel.isTaskInProgress(task);
+                                final isCompleted =
+                                    widget.viewModel.isTaskCompleted(task);
+                                return _TaskCard(
+                                  task: task,
+                                  statusLabel: statusLabel,
+                                  isOverdue: isOverdue,
+                                  isInProgress: isInProgress,
+                                  isCompleted: isCompleted,
+                                  isCompleting:
+                                      widget.viewModel.isCompleting(task.id),
+                                  onQuickComplete: () =>
+                                      widget.viewModel.quickCompleteTask(task),
+                                  onTap: () async {
+                                    await Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (_) => TaskDetailView(
+                                          task: task,
+                                          onTaskUpdated:
+                                              widget.viewModel.updateTask,
+                                        ),
+                                      ),
+                                    );
+                                    widget.viewModel
+                                        .fetchTasks(showLoader: false);
+                                  },
+                                );
+                              },
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _TaskCard extends StatelessWidget {
-  const _TaskCard({required this.task, required this.onTap});
+  const _TaskCard({
+    required this.task,
+    required this.statusLabel,
+    required this.isOverdue,
+    required this.isInProgress,
+    required this.isCompleted,
+    required this.isCompleting,
+    required this.onQuickComplete,
+    required this.onTap,
+  });
 
   final Task task;
+  final String statusLabel;
+  final bool isOverdue;
+  final bool isInProgress;
+  final bool isCompleted;
+  final bool isCompleting;
+  final VoidCallback onQuickComplete;
   final VoidCallback onTap;
 
   Color _priorityColor(String priority) {
@@ -326,162 +605,212 @@ class _TaskCard extends StatelessWidget {
     }
   }
 
-  Color _statusColor(String status) {
-    switch (status.toLowerCase()) {
+  Color _statusColor(String status, {required bool isOverdue}) {
+    if (isOverdue) return Colors.red;
+    switch (status.toLowerCase().replaceAll(' ', '_')) {
+      case 'done':
       case 'completed':
         return Colors.green;
-      case 'in progress':
+      case 'in_progress':
         return Colors.blue;
-      case 'overdue':
-        return Colors.red;
+      case 'review':
+        return Colors.purple;
+      case 'todo':
+      case 'pending':
+        return Colors.orange;
+      case 'cancelled':
+        return Colors.grey;
       default:
         return kcTextMutedColor;
     }
   }
 
+  String _normalizeStatus(String status) {
+    return status.trim().replaceAll(' ', '_').toUpperCase();
+  }
+
+  String _dueLabel(String due, bool isOverdue) {
+    if (isOverdue) return 'Overdue';
+    final lower = due.toLowerCase();
+    if (lower.contains('today')) return 'Due today';
+    if (lower.contains('tomorrow')) return 'Due tomorrow';
+    if (lower.contains('no due')) return 'No due date';
+    return 'Due';
+  }
+
+  Color _dueColor(String due, bool isOverdue) {
+    if (isOverdue) return kcRoseColor;
+    final lower = due.toLowerCase();
+    if (lower.contains('today') || lower.contains('tomorrow')) {
+      return kcAmberColor;
+    }
+    return kcTextMutedColor;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final dueText = _dueLabel(task.due, isOverdue);
+    final dueColor = _dueColor(task.due, isOverdue);
+    final hasDue = task.due.toLowerCase() != 'no due date';
+    final hasDescription = task.description.trim().isNotEmpty;
+    final statusColor = isCompleted
+        ? kcTextMutedColor
+        : _statusColor(task.status, isOverdue: isOverdue);
+    final priorityColor = isCompleted
+        ? kcTextMutedColor
+        : _priorityColor(task.priority);
+    final attachmentCount = task.attachments.length;
+    final commentCount = task.comments.length;
+    final showProgress = isInProgress && task.progress > 0;
+    final showPriority = task.priority.trim().toLowerCase() != 'medium';
+
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isCompleted ? kcBackgroundColor : kcSurfaceColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kcBorderColor),
+          border: Border.all(
+            color: isCompleted
+                ? kcBorderColor.withOpacity(0.6)
+                : kcBorderColor,
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                if (task.tag.isNotEmpty)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: kcPrimaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      task.tag,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: kcPrimaryColor,
-                      ),
-                    ),
-                  )
-                else
-                  const SizedBox(),
-                Row(
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _statusColor(task.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        task.status,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: _statusColor(task.status),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            task.title,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: kcTextColor,
+                            ).copyWith(
+                              color: isCompleted
+                                  ? kcTextMutedColor
+                                  : kcTextColor,
+                              decoration: isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                          ),
                         ),
+                      ],
+                    ),
+                    if (hasDescription) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        task.description,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: isCompleted
+                              ? kcTextMutedColor.withOpacity(0.7)
+                              : kcTextMutedColor,
+                          height: 1.4,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                    ],
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 6,
+                      children: [
+                        _InlineMeta(
+                          label: statusLabel,
+                          color: statusColor,
+                          icon: Icons.circle,
+                        ),
+                        if (!isCompleted && hasDue && !isOverdue)
+                          _InlineMeta(
+                            label: dueText,
+                            color: dueColor,
+                            icon: Icons.schedule,
+                          ),
+                        if (showPriority)
+                          _InlineMeta(
+                            label: task.priority,
+                            color: priorityColor,
+                            icon: Icons.flag_rounded,
+                          ),
+                        // if (task.tag.trim().isNotEmpty)
+                        //   _InlineMeta(
+                        //     label: task.tag,
+                        //     color: isCompleted
+                        //         ? kcTextMutedColor
+                        //         : kcPrimaryColor,
+                        //     icon: Icons.label_rounded,
+                        //   ),
+                        if (showProgress)
+                          _InlineMeta(
+                            label: '${task.progress}%',
+                            color: kcPrimaryColorDark,
+                            icon: Icons.trending_up,
+                          ),
+                        if (attachmentCount > 0)
+                          _InlineMeta(
+                            label: '$attachmentCount',
+                            color: kcTextMutedColor,
+                            icon: Icons.attach_file,
+                          ),
+                        if (commentCount > 0)
+                          _InlineMeta(
+                            label: '$commentCount',
+                            color: kcTextMutedColor,
+                            icon: Icons.mode_comment_outlined,
+                          ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Text(
-              task.title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: kcTextColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              task.description,
-              style: const TextStyle(
-                fontSize: 13,
-                color: kcTextMutedColor,
-                height: 1.4,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (task.status == 'In Progress' && task.progress > 0) ...[
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Progress',
-                      style: TextStyle(fontSize: 10, color: kcTextMutedColor)),
-                  Text('${task.progress}%',
-                      style: const TextStyle(
-                          fontSize: 10, fontWeight: FontWeight.w600)),
-                ],
-              ),
-              const SizedBox(height: 4),
-              LinearProgressIndicator(
-                value: task.progress / 100,
-                backgroundColor: kcBackgroundColor,
-                color: kcPrimaryColor,
-                minHeight: 4,
-                borderRadius: BorderRadius.circular(2),
               ),
             ],
-            const SizedBox(height: 14),
-            Row(
-              children: [
-                const Icon(Icons.calendar_today,
-                    size: 14, color: kcTextMutedColor),
-                const SizedBox(width: 4),
-                Text(
-                  task.due,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: task.status == 'Overdue'
-                        ? Colors.red
-                        : kcTextMutedColor,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _priorityColor(task.priority).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    task.priority,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: _priorityColor(task.priority),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                AppAvatar(
-                  imageUrl: task.assigneeAvatar,
-                  radius: 14,
-                  fallbackInitials: 'U',
-                ),
-              ],
-            ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+class _InlineMeta extends StatelessWidget {
+  const _InlineMeta({
+    required this.label,
+    required this.color,
+    required this.icon,
+  });
+
+  final String label;
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: color),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
     );
   }
 }

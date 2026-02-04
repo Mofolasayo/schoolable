@@ -41,6 +41,7 @@ class AnnouncementDetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = _getAnnouncementColor(announcement.type);
     final icon = _getAnnouncementIcon(announcement.type);
+    final isUnread = !announcement.isRead;
 
     return Scaffold(
       backgroundColor: kcBackgroundColor,
@@ -66,26 +67,24 @@ class AnnouncementDetailView extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Main Card
             Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
+                color: kcSurfaceColor,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: kcBorderColor),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Type Badge and Time
                   Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 6),
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(20),
+                          color: color.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(999),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -97,88 +96,86 @@ class AnnouncementDetailView extends StatelessWidget {
                               style: TextStyle(
                                 color: color,
                                 fontSize: 11,
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 letterSpacing: 0.5,
                               ),
                             ),
                           ],
                         ),
                       ),
-                      const Spacer(),
-                      if (!announcement.isRead)
+                      if (isUnread) ...[
+                        const SizedBox(width: 8),
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
                             color: kcPrimaryColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(999),
                           ),
                           child: const Text(
                             'NEW',
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
                               color: kcPrimaryColor,
                               letterSpacing: 0.5,
                             ),
                           ),
                         ),
+                      ],
+                      const Spacer(),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time_rounded,
+                            size: 14,
+                            color: kcTextMutedColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            announcement.time,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: kcTextMutedColor,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 20),
-
-                  // Title
+                  const SizedBox(height: 16),
                   Text(
                     announcement.title,
                     style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w500,
                       color: kcTextColor,
                       height: 1.3,
                     ),
                   ),
                   const SizedBox(height: 12),
-
-                  // Time
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.access_time_rounded,
-                        size: 14,
-                        color: kcTextMutedColor,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        announcement.time,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: kcTextMutedColor,
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    'Details',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: kcTextMutedColor,
+                      letterSpacing: 0.4,
+                    ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Divider
-                  Container(
-                    height: 1,
-                    color: Colors.grey[100],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Message Content
+                  const SizedBox(height: 10),
                   Text(
                     announcement.message,
                     style: const TextStyle(
                       fontSize: 15,
                       color: kcTextColor,
-                      height: 1.7,
+                      height: 1.6,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // Mark as Read Button (if not already read)
             if (!announcement.isRead)

@@ -8,6 +8,7 @@ import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/services/cache_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/common/widgets/app_avatar.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 class MessageDetailViewModel extends BaseViewModel {
   final BackendApiService _backendService = locator<BackendApiService>();
@@ -83,9 +84,9 @@ class MessageDetailViewModel extends BaseViewModel {
   Future<void> _sendReadReceipt() async {
     try {
       await _backendService.markChannelAsRead(channelId);
-      print('✅ Read receipt sent for channel: $channelId');
+      AppLogger.log('✅ Read receipt sent for channel: $channelId');
     } catch (e) {
-      print('⚠️ Failed to send read receipt: $e');
+      AppLogger.log('⚠️ Failed to send read receipt: $e');
     }
   }
 

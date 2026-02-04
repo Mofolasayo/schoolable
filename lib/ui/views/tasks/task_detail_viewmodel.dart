@@ -16,9 +16,14 @@ class TaskDetailViewModel extends BaseViewModel {
 
   late String _currentStatus;
   String get status => _currentStatus;
-  bool get isCompleted => _currentStatus == 'Completed';
+  String get displayStatus => _formatStatus(_currentStatus);
+  bool get isCompleted {
+    final normalized = _normalizeStatus(_currentStatus);
+    return normalized == 'completed' || normalized == 'done';
+  }
 
   Timer? _timer;
+  DateTime? _ignoreRefreshUntil;
 
   String _userAvatar = '';
   String _userName = '';
@@ -55,7 +60,10 @@ class TaskDetailViewModel extends BaseViewModel {
         Timer.periodic(const Duration(seconds: 30), (timer) => refreshTask());
   }
 
-  Future<void> refreshTask() async {
+  Future<void> refreshTask({bool force = false}) async {
+    if (!force && _isRefreshSuppressed()) {
+      return;
+    }
     final updatedData = await _backendService.getTask(_task.id);
     if (updatedData != null) {
       _task = Task.fromMap(updatedData);
@@ -71,22 +79,52 @@ class TaskDetailViewModel extends BaseViewModel {
   }
 
   Color getStatusColor() {
-    switch (_currentStatus.toLowerCase()) {
+    switch (_normalizeStatus(_currentStatus)) {
       case 'completed':
-        return Colors.green;
-      case 'in progress':
-        return Colors.blue;
+      case 'done':
+        return kcTealColor;
+      case 'in_progress':
+      case 'review':
+        return kcPrimaryColor;
       case 'overdue':
-        return Colors.red;
+        return kcRoseColor;
+      case 'pending':
+      case 'todo':
+        return kcAmberColor;
       default:
         return kcTextMutedColor;
     }
   }
 
-  Future<void> markAsComplete() async {
+  String _normalizeStatus(String status) {
+    return status.trim().replaceAll(' ', '_').toLowerCase();
+  }
+
+  String _formatStatus(String status) {
+    final normalized = status.trim().replaceAll('_', ' ').toLowerCase();
+    if (normalized.isEmpty) return status;
+    return normalized
+        .split(' ')
+        .map((word) =>
+            word.isEmpty ? word : word[0].toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
+  bool _isRefreshSuppressed() {
+    if (_ignoreRefreshUntil == null) return false;
+    return DateTime.now().isBefore(_ignoreRefreshUntil!);
+  }
+
+  void _suppressRefresh([Duration duration = const Duration(seconds: 8)]) {
+    _ignoreRefreshUntil = DateTime.now().add(duration);
+  }
+
+
+  Future<bool> markAsComplete() async {
     final previousTask = _task; // Snapshot for rollback
     final previousStatus = _currentStatus;
 
+    _suppressRefresh();
     // 1. Optimistic Update
     _currentStatus = 'Completed';
     // Create new subtasks list with all completed
@@ -113,18 +151,28 @@ class TaskDetailViewModel extends BaseViewModel {
     notifyListeners();
 
     try {
-      await _backendService.completeTask(_task.id);
+      final success = await _backendService.completeTask(_task.id);
+      if (!success) {
+        _task = previousTask;
+        _currentStatus = previousStatus;
+        notifyListeners();
+        return false;
+      }
+      await refreshTask(force: true);
+      return true;
     } catch (e) {
       // Rollback
       _task = previousTask;
       _currentStatus = previousStatus;
       notifyListeners();
+      return false;
     }
   }
 
   Future<void> addSubtask(String title) async {
     if (title.trim().isEmpty) return;
 
+    _suppressRefresh();
     // Optimistic Update
     final newSubtask = Subtask(
       id: DateTime.now().millisecondsSinceEpoch, // Temp ID
@@ -167,6 +215,7 @@ class TaskDetailViewModel extends BaseViewModel {
       if (result != null) {
         // Optionally update the temp ID with real ID if needed immediatley,
         // but easier to just let refresh handle it.
+        await refreshTask(force: true);
       }
     } catch (e) {
       // Revert logic would go here
@@ -178,6 +227,7 @@ class TaskDetailViewModel extends BaseViewModel {
     final originalStatus = _currentStatus;
     subtask.completed = !subtask.completed;
 
+    _suppressRefresh();
     // INSTANTLY recalculate progress
     final total = _task.subtasks.length;
     final completedCount = _task.subtasks.where((s) => s.completed).length;
@@ -224,6 +274,8 @@ class TaskDetailViewModel extends BaseViewModel {
         subtask.completed = originalState;
         _currentStatus = originalStatus;
         notifyListeners();
+      } else {
+        await refreshTask(force: true);
       }
     } catch (e) {
       subtask.completed = originalState; // Revert
@@ -292,10 +344,18 @@ class TaskDetailViewModel extends BaseViewModel {
     _currentStatus = newStatus;
     notifyListeners();
 
+    _suppressRefresh();
     try {
       int progress =
           newStatus == 'Completed' ? 100 : (newStatus == 'Pending' ? 0 : 50);
-      await _backendService.updateTaskStatus(task.id, newStatus, progress);
+      final success = await _backendService.updateTaskStatus(
+          task.id, newStatus, progress);
+      if (!success) {
+        _currentStatus = originalStatus;
+        notifyListeners();
+      } else {
+        await refreshTask(force: true);
+      }
     } catch (e) {
       _currentStatus = originalStatus;
       notifyListeners();

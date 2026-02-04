@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 /// A service that provides local caching for API responses.
 /// Uses the "stale-while-revalidate" pattern:
@@ -25,6 +27,8 @@ class CacheService {
   static const String keyDirectMessages = 'cache_dms';
   static const String keyAttendanceHistory = 'cache_attendance_history';
   static const String keyAttendanceToday = 'cache_attendance_today';
+  static const String keyDeviceId = 'device_id';
+  static const String _keyCacheUserId = 'cache_user_id';
 
   // Cache expiration times (in minutes)
   static const int profileCacheDuration = 60; // 1 hour
@@ -32,6 +36,36 @@ class CacheService {
   static const int tasksCacheDuration = 5; // 5 minutes
   static const int messagesCacheDuration = 2; // 2 minutes
   static const int attendanceCacheDuration = 5; // 5 minutes
+
+  /// Device ID helpers (stored in secure storage)
+  Future<String> getOrCreateDeviceId() async {
+    try {
+      final existing = await _storage.read(key: keyDeviceId);
+      if (existing != null && existing.isNotEmpty) {
+        return existing;
+      }
+    } catch (_) {
+      // Fall back to a generated ID when secure storage isn't available.
+    }
+
+    final id = _generateDeviceId();
+    try {
+      await _storage.write(key: keyDeviceId, value: id);
+    } catch (_) {
+      // Best-effort write; still return the generated ID.
+    }
+    return id;
+  }
+
+  String _generateDeviceId() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    final buffer = StringBuffer();
+    for (final b in bytes) {
+      buffer.write(b.toRadixString(16).padLeft(2, '0'));
+    }
+    return buffer.toString();
+  }
 
   /// Check if cached data is still valid
   bool isCacheValid(String key, int maxAgeMinutes) {
@@ -41,10 +75,47 @@ class CacheService {
     return age < maxAgeMinutes;
   }
 
+  int? _maxAgeMinutesForKey(String key) {
+    if (key == keyProfile) return profileCacheDuration;
+    if (key == keyAnnouncements) return announcementsCacheDuration;
+    if (key == keyTasks) return tasksCacheDuration;
+    if (key == keyChannels) return messagesCacheDuration;
+    if (key == keyDirectMessages) return messagesCacheDuration;
+    if (key == keyAttendanceHistory) return attendanceCacheDuration;
+    if (key == keyAttendanceToday) return attendanceCacheDuration;
+    if (key == keyHomeStats) return 15;
+    if (key == keyAuraScore) return 15;
+    if (key.startsWith('cache_messages_')) return messagesCacheDuration;
+    return null;
+  }
+
+  bool _isExpired(String key, DateTime? timestamp) {
+    final maxAgeMinutes = _maxAgeMinutesForKey(key);
+    if (maxAgeMinutes == null) return false;
+    if (timestamp == null) return true;
+    final age = DateTime.now().difference(timestamp).inMinutes;
+    return age >= maxAgeMinutes;
+  }
+
+  /// Ensure cached data belongs to the active user (clears cache on user change)
+  Future<void> setActiveUser(String userId) async {
+    if (userId.isEmpty) return;
+    final storedUserId = await _storage.read(key: _keyCacheUserId);
+    if (storedUserId != null && storedUserId != userId) {
+      await clearAll(clearUserScope: false);
+    }
+    await _storage.write(key: _keyCacheUserId, value: userId);
+  }
+
   /// Get data from cache (memory first, then storage)
   Future<T?> get<T>(String key) async {
     // Try memory cache first
     if (_memoryCache.containsKey(key)) {
+      final timestamp = _cacheTimestamps[key];
+      if (_isExpired(key, timestamp)) {
+        await remove(key);
+        return null;
+      }
       return _memoryCache[key] as T?;
     }
 
@@ -57,13 +128,21 @@ class CacheService {
         _memoryCache[key] = data;
         // Try to restore timestamp
         final timestampStr = await _storage.read(key: '${key}_timestamp');
+        DateTime? timestamp;
         if (timestampStr != null) {
-          _cacheTimestamps[key] = DateTime.parse(timestampStr);
+          timestamp = DateTime.tryParse(timestampStr);
+          if (timestamp != null) {
+            _cacheTimestamps[key] = timestamp;
+          }
+        }
+        if (_isExpired(key, timestamp)) {
+          await remove(key);
+          return null;
         }
         return data as T?;
       }
     } catch (e) {
-      print('Cache read error for $key: $e');
+      AppLogger.error('Cache read error for $key', e);
     }
     return null;
   }
@@ -82,7 +161,7 @@ class CacheService {
         value: DateTime.now().toIso8601String(),
       );
     } catch (e) {
-      print('Cache write error for $key: $e');
+      AppLogger.error('Cache write error for $key', e);
     }
   }
 
@@ -94,30 +173,27 @@ class CacheService {
       await _storage.delete(key: key);
       await _storage.delete(key: '${key}_timestamp');
     } catch (e) {
-      print('Cache delete error for $key: $e');
+      AppLogger.error('Cache delete error for $key', e);
     }
   }
 
   /// Clear all cache
-  Future<void> clearAll() async {
+  Future<void> clearAll({bool clearUserScope = false}) async {
     _memoryCache.clear();
     _cacheTimestamps.clear();
     try {
-      // Only delete cache keys, not auth tokens
-      for (final key in [
-        keyProfile,
-        keyAnnouncements,
-        keyTasks,
-        keyChannels,
-        keyDirectMessages,
-        keyAttendanceHistory,
-        keyAttendanceToday,
-      ]) {
+      final all = await _storage.readAll();
+      for (final key in all.keys) {
+        if (!key.startsWith('cache_')) continue;
+        if (!clearUserScope && key == _keyCacheUserId) continue;
         await _storage.delete(key: key);
         await _storage.delete(key: '${key}_timestamp');
       }
+      if (clearUserScope) {
+        await _storage.delete(key: _keyCacheUserId);
+      }
     } catch (e) {
-      print('Cache clear error: $e');
+      AppLogger.error('Cache clear error', e);
     }
   }
 

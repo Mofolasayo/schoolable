@@ -6,18 +6,26 @@ import 'package:schoolable/app/app.dialogs.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/app/app.router.dart';
 import 'package:schoolable/services/notification_service.dart';
+import 'package:schoolable/services/connectivity_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:stacked_services/stacked_services.dart';
 import 'firebase_options.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await dotenv.load(fileName: "assets/.env");
+  final backendUrl = dotenv.env['BACKEND_URL'];
+  if (backendUrl == null || backendUrl.isEmpty) {
+    AppLogger.error('BACKEND_URL is not set in assets/.env');
+    throw Exception('BACKEND_URL is not set in assets/.env');
+  }
 
   await setupLocator();
   setupDialogUi();
   setupBottomSheetUi();
+  await ConnectivityService().initialize();
 
   final firebaseOptions = DefaultFirebaseOptions.currentPlatform;
   final hasRealFirebaseConfig = ![
@@ -35,8 +43,7 @@ Future<void> main() async {
     await NotificationService().initialize();
   } else {
     // Skip Firebase init to avoid runtime errors until config is provided
-    // ignore: avoid_print
-    print(
+    AppLogger.log(
       '⚠️ Firebase not configured. Run flutterfire configure and update lib/firebase_options.dart, android/app/google-services.json, and ios/Runner/GoogleService-Info.plist',
     );
   }

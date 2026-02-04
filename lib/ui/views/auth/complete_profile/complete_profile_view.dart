@@ -15,6 +15,10 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
   }) : super(key: key);
 
   @override
+  void onViewModelReady(CompleteProfileViewModel viewModel) =>
+      viewModel.initialize();
+
+  @override
   Widget builder(
       BuildContext context, CompleteProfileViewModel viewModel, Widget? child) {
     return Scaffold(
@@ -27,10 +31,9 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo
                 Center(
                   child: Image.asset(
-                    'assets/images/schoolable_logo.png',
+                    'assets/images/worksight_logo.png',
                     width: 72,
                     height: 72,
                   ),
@@ -129,9 +132,12 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       value: viewModel.selectedDepartment,
-                      hint: const Text(
-                        'Select Department',
-                        style: TextStyle(color: kcTextMutedColor, fontSize: 14),
+                      hint: Text(
+                        viewModel.isLoadingReferenceData
+                            ? 'Loading departments...'
+                            : 'Select Department',
+                        style: const TextStyle(
+                            color: kcTextMutedColor, fontSize: 14),
                       ),
                       isExpanded: true,
                       icon: const Icon(Icons.arrow_drop_down,
@@ -143,7 +149,9 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                               Text(dept, style: const TextStyle(fontSize: 14)),
                         );
                       }).toList(),
-                      onChanged: viewModel.setDepartment,
+                      onChanged: viewModel.isLoadingReferenceData
+                          ? null
+                          : viewModel.setDepartment,
                     ),
                   ),
                 ),
@@ -306,21 +314,36 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: kcBorderColor),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Are you a team lead?',
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: kcTextColor,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Are you a team lead?',
+                            style: TextStyle(
+                              fontSize: 15,
+                              color: kcTextColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Switch(
+                            value: viewModel.isTeamLead,
+                            onChanged: viewModel.toggleTeamLead,
+                            activeColor: kcPrimaryColor,
+                          ),
+                        ],
                       ),
-                      Switch(
-                        value: viewModel.isTeamLead,
-                        onChanged: viewModel.toggleTeamLead,
-                        activeColor: kcPrimaryColor,
+                      const Padding(
+                        padding: EdgeInsets.only(top: 4),
+                        child: Text(
+                          'Team lead access requires admin approval.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: kcTextMutedColor,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -339,9 +362,12 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<int>(
                       value: viewModel.selectedEmployeeLevel,
-                      hint: const Text(
-                        'Select Grade Level',
-                        style: TextStyle(color: kcTextMutedColor, fontSize: 14),
+                      hint: Text(
+                        viewModel.isLoadingReferenceData
+                            ? 'Loading grade levels...'
+                            : 'Select Grade Level',
+                        style: const TextStyle(
+                            color: kcTextMutedColor, fontSize: 14),
                       ),
                       isExpanded: true,
                       icon: const Icon(Icons.stars, color: kcTextMutedColor),
@@ -352,7 +378,9 @@ class CompleteProfileView extends StackedView<CompleteProfileViewModel> {
                               style: const TextStyle(fontSize: 14)),
                         );
                       }).toList(),
-                      onChanged: viewModel.setEmployeeLevel,
+                      onChanged: viewModel.isLoadingReferenceData
+                          ? null
+                          : viewModel.setEmployeeLevel,
                     ),
                   ),
                 ),

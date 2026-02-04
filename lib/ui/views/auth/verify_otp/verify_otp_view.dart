@@ -30,7 +30,7 @@ class VerifyOtpView extends StackedView<VerifyOtpViewModel> {
               children: [
                 Center(
                   child: Image.asset(
-                    'assets/images/schoolable_logo.png',
+                    'assets/images/worksight_logo.png',
                     width: 72,
                     height: 72,
                   ),

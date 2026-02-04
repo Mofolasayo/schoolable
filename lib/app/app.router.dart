@@ -5,7 +5,7 @@
 // **************************************************************************
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
-import 'package:flutter/material.dart' as _i13;
+import 'package:flutter/material.dart' as _i14;
 import 'package:flutter/material.dart';
 import 'package:schoolable/ui/views/auth/complete_profile/complete_profile_view.dart'
     as _i6;
@@ -20,10 +20,11 @@ import 'package:schoolable/ui/views/auth/verify_otp/verify_otp_view.dart'
 import 'package:schoolable/ui/views/home/home_view.dart' as _i2;
 import 'package:schoolable/ui/views/onboarding/onboarding_view.dart' as _i9;
 import 'package:schoolable/ui/views/profile/growth_view.dart' as _i11;
-import 'package:schoolable/ui/views/profile/security_view.dart' as _i12;
+import 'package:schoolable/ui/views/profile/leave/leave_view.dart' as _i12;
+import 'package:schoolable/ui/views/profile/security_view.dart' as _i13;
 import 'package:schoolable/ui/views/startup/startup_view.dart' as _i3;
 import 'package:stacked/stacked.dart' as _i1;
-import 'package:stacked_services/stacked_services.dart' as _i14;
+import 'package:stacked_services/stacked_services.dart' as _i15;
 
 class Routes {
   static const homeView = '/home-view';
@@ -46,6 +47,8 @@ class Routes {
 
   static const growthView = '/growth-view';
 
+  static const leaveView = '/leave-view';
+
   static const securityView = '/security-view';
 
   static const all = <String>{
@@ -59,6 +62,7 @@ class Routes {
     onboardingView,
     verifyOtpView,
     growthView,
+    leaveView,
     securityView,
   };
 }
@@ -106,67 +110,75 @@ class StackedRouter extends _i1.RouterBase {
       page: _i11.GrowthView,
     ),
     _i1.RouteDef(
+      Routes.leaveView,
+      page: _i12.LeaveView,
+    ),
+    _i1.RouteDef(
       Routes.securityView,
-      page: _i12.SecurityView,
+      page: _i13.SecurityView,
     ),
   ];
 
   final _pagesMap = <Type, _i1.StackedRouteFactory>{
     _i2.HomeView: (data) {
-      return _i13.MaterialPageRoute<dynamic>(
-        builder: (context) => const _i2.HomeView(),
+      final args = data.getArgs<HomeViewArguments>(
+        orElse: () => const HomeViewArguments(),
+      );
+      return _i14.MaterialPageRoute<dynamic>(
+        builder: (context) =>
+            _i2.HomeView(key: args.key, initialTab: args.initialTab),
         settings: data,
       );
     },
     _i3.StartupView: (data) {
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) => const _i3.StartupView(),
         settings: data,
       );
     },
     _i4.LoginView: (data) {
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) => const _i4.LoginView(),
         settings: data,
       );
     },
     _i5.SignupView: (data) {
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) => const _i5.SignupView(),
         settings: data,
       );
     },
     _i6.CompleteProfileView: (data) {
       final args = data.getArgs<CompleteProfileViewArguments>(nullOk: false);
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) => _i6.CompleteProfileView(
             key: args.key, email: args.email, fullName: args.fullName),
         settings: data,
       );
     },
     _i7.ForgotPasswordView: (data) {
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) => const _i7.ForgotPasswordView(),
         settings: data,
       );
     },
     _i8.ResetPasswordView: (data) {
       final args = data.getArgs<ResetPasswordViewArguments>(nullOk: false);
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) =>
             _i8.ResetPasswordView(key: args.key, code: args.code),
         settings: data,
       );
     },
     _i9.OnboardingView: (data) {
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) => const _i9.OnboardingView(),
         settings: data,
       );
     },
     _i10.VerifyOtpView: (data) {
       final args = data.getArgs<VerifyOtpViewArguments>(nullOk: false);
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) => _i10.VerifyOtpView(
             key: args.key,
             email: args.email,
@@ -175,14 +187,20 @@ class StackedRouter extends _i1.RouterBase {
       );
     },
     _i11.GrowthView: (data) {
-      return _i13.MaterialPageRoute<dynamic>(
+      return _i14.MaterialPageRoute<dynamic>(
         builder: (context) => const _i11.GrowthView(),
         settings: data,
       );
     },
-    _i12.SecurityView: (data) {
-      return _i13.MaterialPageRoute<dynamic>(
-        builder: (context) => const _i12.SecurityView(),
+    _i12.LeaveView: (data) {
+      return _i14.MaterialPageRoute<dynamic>(
+        builder: (context) => const _i12.LeaveView(),
+        settings: data,
+      );
+    },
+    _i13.SecurityView: (data) {
+      return _i14.MaterialPageRoute<dynamic>(
+        builder: (context) => const _i13.SecurityView(),
         settings: data,
       );
     },
@@ -195,6 +213,33 @@ class StackedRouter extends _i1.RouterBase {
   Map<Type, _i1.StackedRouteFactory> get pagesMap => _pagesMap;
 }
 
+class HomeViewArguments {
+  const HomeViewArguments({
+    this.key,
+    this.initialTab = 0,
+  });
+
+  final _i14.Key? key;
+
+  final int initialTab;
+
+  @override
+  String toString() {
+    return '{"key": "$key", "initialTab": "$initialTab"}';
+  }
+
+  @override
+  bool operator ==(covariant HomeViewArguments other) {
+    if (identical(this, other)) return true;
+    return other.key == key && other.initialTab == initialTab;
+  }
+
+  @override
+  int get hashCode {
+    return key.hashCode ^ initialTab.hashCode;
+  }
+}
+
 class CompleteProfileViewArguments {
   const CompleteProfileViewArguments({
     this.key,
@@ -202,7 +247,7 @@ class CompleteProfileViewArguments {
     required this.fullName,
   });
 
-  final _i13.Key? key;
+  final _i14.Key? key;
 
   final String email;
 
@@ -233,7 +278,7 @@ class ResetPasswordViewArguments {
     required this.code,
   });
 
-  final _i13.Key? key;
+  final _i14.Key? key;
 
   final String code;
 
@@ -261,7 +306,7 @@ class VerifyOtpViewArguments {
     this.isPasswordReset = false,
   });
 
-  final _i13.Key? key;
+  final _i14.Key? key;
 
   final String email;
 
@@ -286,15 +331,18 @@ class VerifyOtpViewArguments {
   }
 }
 
-extension NavigatorStateExtension on _i14.NavigationService {
-  Future<dynamic> navigateToHomeView([
+extension NavigatorStateExtension on _i15.NavigationService {
+  Future<dynamic> navigateToHomeView({
+    _i14.Key? key,
+    int initialTab = 0,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
     Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
         transition,
-  ]) async {
+  }) async {
     return navigateTo<dynamic>(Routes.homeView,
+        arguments: HomeViewArguments(key: key, initialTab: initialTab),
         id: routerId,
         preventDuplicates: preventDuplicates,
         parameters: parameters,
@@ -344,7 +392,7 @@ extension NavigatorStateExtension on _i14.NavigationService {
   }
 
   Future<dynamic> navigateToCompleteProfileView({
-    _i13.Key? key,
+    _i14.Key? key,
     required String email,
     required String fullName,
     int? routerId,
@@ -377,7 +425,7 @@ extension NavigatorStateExtension on _i14.NavigationService {
   }
 
   Future<dynamic> navigateToResetPasswordView({
-    _i13.Key? key,
+    _i14.Key? key,
     required String code,
     int? routerId,
     bool preventDuplicates = true,
@@ -408,7 +456,7 @@ extension NavigatorStateExtension on _i14.NavigationService {
   }
 
   Future<dynamic> navigateToVerifyOtpView({
-    _i13.Key? key,
+    _i14.Key? key,
     required String email,
     bool isPasswordReset = false,
     int? routerId,
@@ -440,6 +488,20 @@ extension NavigatorStateExtension on _i14.NavigationService {
         transition: transition);
   }
 
+  Future<dynamic> navigateToLeaveView([
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  ]) async {
+    return navigateTo<dynamic>(Routes.leaveView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
   Future<dynamic> navigateToSecurityView([
     int? routerId,
     bool preventDuplicates = true,
@@ -454,14 +516,17 @@ extension NavigatorStateExtension on _i14.NavigationService {
         transition: transition);
   }
 
-  Future<dynamic> replaceWithHomeView([
+  Future<dynamic> replaceWithHomeView({
+    _i14.Key? key,
+    int initialTab = 0,
     int? routerId,
     bool preventDuplicates = true,
     Map<String, String>? parameters,
     Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
         transition,
-  ]) async {
+  }) async {
     return replaceWith<dynamic>(Routes.homeView,
+        arguments: HomeViewArguments(key: key, initialTab: initialTab),
         id: routerId,
         preventDuplicates: preventDuplicates,
         parameters: parameters,
@@ -511,7 +576,7 @@ extension NavigatorStateExtension on _i14.NavigationService {
   }
 
   Future<dynamic> replaceWithCompleteProfileView({
-    _i13.Key? key,
+    _i14.Key? key,
     required String email,
     required String fullName,
     int? routerId,
@@ -544,7 +609,7 @@ extension NavigatorStateExtension on _i14.NavigationService {
   }
 
   Future<dynamic> replaceWithResetPasswordView({
-    _i13.Key? key,
+    _i14.Key? key,
     required String code,
     int? routerId,
     bool preventDuplicates = true,
@@ -575,7 +640,7 @@ extension NavigatorStateExtension on _i14.NavigationService {
   }
 
   Future<dynamic> replaceWithVerifyOtpView({
-    _i13.Key? key,
+    _i14.Key? key,
     required String email,
     bool isPasswordReset = false,
     int? routerId,
@@ -601,6 +666,20 @@ extension NavigatorStateExtension on _i14.NavigationService {
         transition,
   ]) async {
     return replaceWith<dynamic>(Routes.growthView,
+        id: routerId,
+        preventDuplicates: preventDuplicates,
+        parameters: parameters,
+        transition: transition);
+  }
+
+  Future<dynamic> replaceWithLeaveView([
+    int? routerId,
+    bool preventDuplicates = true,
+    Map<String, String>? parameters,
+    Widget Function(BuildContext, Animation<double>, Animation<double>, Widget)?
+        transition,
+  ]) async {
+    return replaceWith<dynamic>(Routes.leaveView,
         id: routerId,
         preventDuplicates: preventDuplicates,
         parameters: parameters,

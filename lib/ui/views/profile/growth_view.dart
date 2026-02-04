@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:stacked/stacked.dart';
@@ -19,8 +17,9 @@ class GrowthView extends StackedView<GrowthViewModel> {
     return Scaffold(
       backgroundColor: kcBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: kcBackgroundColor,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: kcTextColor, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -42,83 +41,38 @@ class GrowthView extends StackedView<GrowthViewModel> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Info Card - Clean white design
+                  // Info Card
                   Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: kcBorderColor),
-                    ),
-                    child: Column(
+                                      padding: EdgeInsets.only(left: 4),
+
+                   // decoration: _cardDecoration(),
+                    child: const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: kcPrimaryColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(
-                                Icons.school_rounded,
-                                color: kcPrimaryColor,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Training Certificates',
-                                    style: TextStyle(
-                                      color: kcTextColor,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: -0.5,
-                                    ),
-                                  ),
-                                  SizedBox(height: 4),
-                                  Text(
-                                    'Upload 1 per quarter for Growth Pillar',
-                                    style: TextStyle(
-                                      color: kcTextMutedColor,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: kcBackgroundColor,
-                            borderRadius: BorderRadius.circular(12),
+                        Text(
+                          'Training certificates',
+                          style: TextStyle(
+                            color: kcTextColor,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
                           ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.info_outline,
-                                  color: kcTextMutedColor.withOpacity(0.6),
-                                  size: 18),
-                              const SizedBox(width: 10),
-                              const Expanded(
-                                child: Text(
-                                  'Certificates contribute 25% to your Aura Score under the Growth & Learning pillar.',
-                                  style: TextStyle(
-                                    color: kcTextMutedColor,
-                                    fontSize: 13,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ),
-                            ],
+                        ),
+                        SizedBox(height: 6),
+                        Text(
+                          'Upload one per quarter for the Growth pillar.',
+                          style: TextStyle(
+                            color: kcTextMutedColor,
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                        SizedBox(height: 12),
+                        Text(
+                          'Certificates contribute 25% to your Aura Score.',
+                          style: TextStyle(
+                            color: kcTextMutedColor,
+                            fontSize: 12,
+                            height: 1.4,
                           ),
                         ),
                       ],
@@ -136,10 +90,9 @@ class GrowthView extends StackedView<GrowthViewModel> {
                     child: Text(
                       'Upload Certificate',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
                         color: kcTextColor,
-                        letterSpacing: -0.5,
                       ),
                     ),
                   ),
@@ -156,10 +109,9 @@ class GrowthView extends StackedView<GrowthViewModel> {
                         child: Text(
                           'History',
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
                             color: kcTextColor,
-                            letterSpacing: -0.5,
                           ),
                         ),
                       ),
@@ -195,43 +147,20 @@ class GrowthView extends StackedView<GrowthViewModel> {
   Widget _buildQuarterStatus(GrowthViewModel viewModel) {
     final hasSubmitted = viewModel.currentQuarterSubmitted;
     final currentQuarter = viewModel.currentQuarter;
+    final accentColor = hasSubmitted ? kcTealColor : kcAmberColor;
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kcBorderColor.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(16),
+      decoration: _cardDecoration(),
       child: Row(
         children: [
           Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: hasSubmitted
-                    ? [const Color(0xFF10B981), const Color(0xFF34D399)]
-                    : [const Color(0xFFF97316), const Color(0xFFFB923C)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Icon(
-              hasSubmitted ? Icons.check_circle_outline : Icons.schedule,
-              color: Colors.white,
-              size: 26,
-            ),
+            width: 8,
+            height: 8,
+            decoration:
+                BoxDecoration(color: accentColor, shape: BoxShape.circle),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -239,8 +168,8 @@ class GrowthView extends StackedView<GrowthViewModel> {
                 Text(
                   '$currentQuarter ${DateTime.now().year}',
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
                     color: kcTextColor,
                   ),
                 ),
@@ -249,33 +178,23 @@ class GrowthView extends StackedView<GrowthViewModel> {
                   hasSubmitted
                       ? 'Requirement met for this quarter'
                       : 'Pending certificate submission',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: hasSubmitted
-                        ? const Color(0xFF10B981)
-                        : const Color(0xFFF97316),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: kcTextMutedColor,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ],
             ),
           ),
-          if (hasSubmitted)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: const Color(0xFF10B981).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Complete',
-                style: TextStyle(
-                  color: Color(0xFF10B981),
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+          Text(
+            hasSubmitted ? 'Complete' : 'Pending',
+            style: TextStyle(
+              color: accentColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
             ),
+          ),
         ],
       ),
     );
@@ -283,45 +202,27 @@ class GrowthView extends StackedView<GrowthViewModel> {
 
   Widget _buildUploadSection(BuildContext context, GrowthViewModel viewModel) {
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kcBorderColor.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(20),
+      decoration: _cardDecoration(),
       child: Column(
         children: [
           // Selected file preview
           if (viewModel.selectedFile != null) ...[
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF), // Blue 50
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFBFDBFE)), // Blue 200
+                color: kcBackgroundColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: kcBorderColor),
               ),
               child: Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.description_rounded,
-                      color: Color(0xFF3B82F6),
-                      size: 24,
-                    ),
+                  const Icon(
+                    Icons.description_outlined,
+                    color: kcTextMutedColor,
+                    size: 20,
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +242,7 @@ class GrowthView extends StackedView<GrowthViewModel> {
                           'Ready to submit',
                           style: TextStyle(
                             fontSize: 12,
-                            color: Color(0xFF3B82F6),
+                            color: kcTextMutedColor,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -349,15 +250,8 @@ class GrowthView extends StackedView<GrowthViewModel> {
                     ),
                   ),
                   IconButton(
-                    icon: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.close,
-                          size: 16, color: kcTextMutedColor),
-                    ),
+                    icon: const Icon(Icons.close,
+                        size: 16, color: kcTextMutedColor),
                     onPressed: viewModel.clearSelectedFile,
                   ),
                 ],
@@ -371,27 +265,26 @@ class GrowthView extends StackedView<GrowthViewModel> {
             controller: viewModel.nameController,
             style: const TextStyle(fontSize: 14),
             decoration: InputDecoration(
-              filled: true,
-              fillColor: kcBackgroundColor,
+              labelText: 'Certificate name',
               hintText: 'Enter certificate name',
               hintStyle: TextStyle(
                   color: kcTextMutedColor.withOpacity(0.6), fontSize: 14),
-              prefixIcon: const Icon(Icons.badge_outlined,
-                  color: kcTextMutedColor, size: 20),
+              filled: true,
+              fillColor: kcBackgroundColor,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: kcBorderColor),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: kcBorderColor),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: kcPrimaryColor, width: 1.5),
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: kcPrimaryColor, width: 1.2),
               ),
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             ),
           ),
           const SizedBox(height: 20),
@@ -402,56 +295,41 @@ class GrowthView extends StackedView<GrowthViewModel> {
               onTap: () => _showUploadOptions(context, viewModel),
               child: Container(
                 width: double.infinity,
-                height: 160,
+                padding: const EdgeInsets.symmetric(vertical: 24),
                 decoration: BoxDecoration(
                   color: kcBackgroundColor,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: kcBorderColor,
-                    style: BorderStyle.none,
-                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: kcBorderColor),
                 ),
-                child: CustomPaint(
-                  painter: DashedBorderPainter(
-                      color: kcTextMutedColor.withOpacity(0.4), strokeWidth: 1),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: kcPrimaryColor.withOpacity(0.08),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.cloud_upload_outlined,
-                          color: kcPrimaryColor,
-                          size: 32,
-                        ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.cloud_upload_outlined,
+                      color: kcTextMutedColor,
+                      size: 26,
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'Tap to upload',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: kcTextColor,
                       ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'Tap to upload certificate',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: kcTextColor,
-                        ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'PDF, JPG or PNG (Max 5MB)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: kcTextMutedColor.withOpacity(0.8),
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'PDF, JPG or PNG (Max 5MB)',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: kcTextMutedColor.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-
           // Submit Button
           if (viewModel.selectedFile != null) ...[
             const SizedBox(height: 8),
@@ -463,9 +341,9 @@ class GrowthView extends StackedView<GrowthViewModel> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kcPrimaryColor,
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(14),
                   ),
                   elevation: 0,
                   shadowColor: Colors.transparent,
@@ -492,32 +370,21 @@ class GrowthView extends StackedView<GrowthViewModel> {
     if (viewModel.certificates.isEmpty) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(32),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: kcBorderColor.withOpacity(0.5)),
-        ),
+        padding: const EdgeInsets.all(24),
+        decoration: _cardDecoration(),
         child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: kcBackgroundColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.folder_open_rounded,
-                color: kcTextMutedColor.withOpacity(0.5),
-                size: 32,
-              ),
+            Icon(
+              Icons.folder_open_rounded,
+              color: kcTextMutedColor.withOpacity(0.6),
+              size: 28,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Text(
               'No certificates yet',
               style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
                 color: kcTextColor,
               ),
             ),
@@ -525,8 +392,8 @@ class GrowthView extends StackedView<GrowthViewModel> {
             Text(
               'Your uploaded documents will appear here',
               style: TextStyle(
-                fontSize: 13,
-                color: kcTextMutedColor.withOpacity(0.7),
+                fontSize: 12,
+                color: kcTextMutedColor,
               ),
             ),
           ],
@@ -543,85 +410,58 @@ class GrowthView extends StackedView<GrowthViewModel> {
         final cert = viewModel.certificates[index];
         final status = cert['status'] ?? 'pending';
         return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: kcBorderColor.withOpacity(0.5)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.01),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+          decoration: _cardDecoration(),
           child: ListTile(
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            leading: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: _getStatusColor(status).withOpacity(0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                status == 'approved'
-                    ? Icons.verified_rounded
-                    : status == 'pending'
-                        ? Icons.schedule_rounded
-                        : Icons.close_rounded,
-                color: _getStatusColor(status),
-                size: 22,
-              ),
+            leading: const Icon(
+              Icons.description_outlined,
+              color: kcTextMutedColor,
+              size: 20,
             ),
             title: Text(
               cert['name'] ?? 'Certificate',
               style: const TextStyle(
                 fontWeight: FontWeight.w600,
-                fontSize: 15,
+                fontSize: 14,
                 color: kcTextColor,
               ),
             ),
             subtitle: Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Row(
-                children: [
-                  Text(
-                    '${cert['quarter']} ${cert['year']}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: kcTextMutedColor.withOpacity(0.8),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: const BoxDecoration(
-                      color: kcTextMutedColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    status.toString().toUpperCase(),
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold,
-                      color: _getStatusColor(status),
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
+              child: Text(
+                '${cert['quarter']} ${cert['year']}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: kcTextMutedColor,
+                ),
               ),
             ),
-            trailing: Icon(Icons.chevron_right,
-                color: kcTextMutedColor.withOpacity(0.5)),
+            trailing: Text(
+              _formatStatus(status.toString()),
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: _getStatusColor(status),
+              ),
+            ),
           ),
         );
       },
     );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: kcSurfaceColor,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: kcBorderColor),
+    );
+  }
+
+  String _formatStatus(String status) {
+    if (status.trim().isEmpty) return status;
+    return status[0].toUpperCase() + status.substring(1).toLowerCase();
   }
 
   Color _getStatusColor(String? status) {
@@ -643,7 +483,7 @@ class GrowthView extends StackedView<GrowthViewModel> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         decoration: const BoxDecoration(
-          color: Colors.white,
+          color: kcSurfaceColor,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
@@ -660,10 +500,10 @@ class GrowthView extends StackedView<GrowthViewModel> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'Upload Certificate',
+              'Upload certificate',
               style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
                 color: kcTextColor,
               ),
             ),
@@ -673,32 +513,26 @@ class GrowthView extends StackedView<GrowthViewModel> {
                 Navigator.pop(context);
                 viewModel.pickImage(ImageSource.gallery);
               },
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: kcBackgroundColor,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: kcBorderColor),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.photo_library_rounded,
-                          color: kcPrimaryColor),
-                    ),
-                    const SizedBox(width: 16),
-                    const Column(
+                    Icon(Icons.photo_library_outlined,
+                        color: kcTextMutedColor),
+                    SizedBox(width: 12),
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Choose from Gallery',
+                          'Choose from gallery',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600),
+                              fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         Text(
                           'Select an image from your photos',
@@ -717,32 +551,25 @@ class GrowthView extends StackedView<GrowthViewModel> {
                 Navigator.pop(context);
                 viewModel.pickImage(ImageSource.camera);
               },
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               child: Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: kcBackgroundColor,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: kcBorderColor),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.camera_alt_rounded,
-                          color: kcPrimaryColor),
-                    ),
-                    const SizedBox(width: 16),
-                    const Column(
+                    Icon(Icons.camera_alt_outlined, color: kcTextMutedColor),
+                    SizedBox(width: 12),
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Take a Photo',
+                          'Take a photo',
                           style: TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600),
+                              fontSize: 14, fontWeight: FontWeight.w600),
                         ),
                         Text(
                           'Capture a new image now',
@@ -763,69 +590,4 @@ class GrowthView extends StackedView<GrowthViewModel> {
 
   @override
   GrowthViewModel viewModelBuilder(BuildContext context) => GrowthViewModel();
-}
-
-class DashedBorderPainter extends CustomPainter {
-  final Color color;
-  final double strokeWidth;
-  final double gap;
-
-  DashedBorderPainter({
-    required this.color,
-    this.strokeWidth = 1.0,
-    this.gap = 5.0,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final Paint paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final Path path = Path()
-      ..addRRect(RRect.fromRectAndRadius(
-        Rect.fromLTWH(0, 0, size.width, size.height),
-        const Radius.circular(16),
-      ));
-
-    final Path dashedPath =
-        _dashPath(path, dashArray: CircularIntervalList<double>([10, gap]));
-    canvas.drawPath(dashedPath, paint);
-  }
-
-  Path _dashPath(Path path, {required CircularIntervalList<double> dashArray}) {
-    final Path dest = Path();
-    for (final PathMetric metric in path.computeMetrics()) {
-      double distance = 0.0;
-      bool draw = true;
-      while (distance < metric.length) {
-        final double len = dashArray.next;
-        if (draw) {
-          dest.addPath(
-              metric.extractPath(distance, distance + len), Offset.zero);
-        }
-        distance += len;
-        draw = !draw;
-      }
-    }
-    return dest;
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class CircularIntervalList<T> {
-  final List<T> _values;
-  int _index = 0;
-
-  CircularIntervalList(this._values);
-
-  T get next {
-    if (_index >= _values.length) {
-      _index = 0;
-    }
-    return _values[_index++];
-  }
 }

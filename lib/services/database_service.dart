@@ -344,6 +344,7 @@ class DatabaseService {
     await db.delete('tasks');
     await db.delete('announcements');
     await db.delete('aura_cache');
+    await db.delete('pending_sync');
     debugPrint('🗑️ All cache cleared');
   }
 

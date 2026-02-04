@@ -1,5 +1,5 @@
 [Unit]
-Description=Schoolable Backend
+Description=WorkSight Backend
 After=network.target
 
 [Service]

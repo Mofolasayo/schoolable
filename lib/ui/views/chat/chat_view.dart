@@ -16,6 +16,46 @@ class ChatView extends StackedView<ChatViewModel> {
     if (viewModel.isBusy) {
       return const Center(child: CupertinoActivityIndicator());
     }
+    if (!viewModel.messagingEnabled) {
+      return SafeArea(
+        child: Center(
+          child: Container(
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: kcBorderColor),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.chat_bubble_outline,
+                    color: kcTextMutedColor, size: 32),
+                const SizedBox(height: 12),
+                const Text(
+                  'Messaging is disabled',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: kcTextColor,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'Chat is currently unavailable for production.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: kcTextMutedColor.withOpacity(0.8),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

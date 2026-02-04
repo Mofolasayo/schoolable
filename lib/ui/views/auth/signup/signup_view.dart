@@ -23,7 +23,7 @@ class SignupView extends StackedView<SignupViewModel> {
                 // Logo
                 Center(
                   child: Image.asset(
-                    'assets/images/schoolable_logo.png',
+                    'assets/images/worksight_logo.png',
                     width: 72,
                     height: 72,
                   ),
@@ -42,7 +42,7 @@ class SignupView extends StackedView<SignupViewModel> {
                 ),
                 const SizedBox(height: 8),
                 const Text(
-                  'Sign up to get started with Schoolable',
+                  'Sign up to get started with WorkSight',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 15,

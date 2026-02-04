@@ -5,6 +5,7 @@ import 'package:schoolable/app/app.router.dart';
 import 'package:stacked_services/stacked_services.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/services/notification_service.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 class LoginViewModel extends BaseViewModel {
   final _nav = locator<NavigationService>();
@@ -40,22 +41,22 @@ class LoginViewModel extends BaseViewModel {
   Future<void> signIn() async {
     setBusy(true);
     try {
-      print('🔐 Attempting login for: ${emailController.text.trim()}');
+      AppLogger.log('🔐 Attempting login for: ${emailController.text.trim()}');
 
       await _backend.signIn(
         email: emailController.text.trim(),
         password: passwordController.text,
       );
 
-      print('✅ Login successful, token saved');
+      AppLogger.log('✅ Login successful, token saved');
 
       // Debug: Verify token was saved
       await _backend.debugAuthState();
 
       // Use the dedicated endpoint to check profile completion status from database
-      print('📋 Checking profile completion status...');
+      AppLogger.log('📋 Checking profile completion status...');
       final completionStatus = await _backend.checkProfileComplete();
-      print('📋 Completion status response: $completionStatus');
+      AppLogger.log('📋 Completion status response: $completionStatus');
 
       final bool isComplete = completionStatus['is_complete'] == true;
       final email = completionStatus['email'] ?? emailController.text;
@@ -63,20 +64,20 @@ class LoginViewModel extends BaseViewModel {
 
       if (!isComplete) {
         // Redirect to Complete Profile
-        print('⚠️ Profile not complete. Redirecting to CompleteProfileView.');
+        AppLogger.log('⚠️ Profile not complete. Redirecting to CompleteProfileView.');
         _nav.replaceWithCompleteProfileView(
           email: email,
           fullName: fullName,
         );
       } else {
         // Profile is complete, go Home
-        print(
+        AppLogger.log(
             '✅ Profile complete (completed at: ${completionStatus['profile_completed_at']}). Going to HomeView.');
-        await _notificationService.initialize();
+        await _notificationService.initialize(forceRegister: true);
         _nav.replaceWithHomeView();
       }
     } catch (e) {
-      print('❌ Login Logic Error: $e');
+      AppLogger.log('❌ Login Logic Error: $e');
       await _dialogService.showDialog(
         title: 'Login Failed',
         description: e.toString(),

@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 /// View showing ratings received by the current user on their completed tasks
 class MyRatingsView extends StackedView<MyRatingsViewModel> {
@@ -536,21 +538,7 @@ class MyRatingsView extends StackedView<MyRatingsViewModel> {
   String _formatDate(String dateStr) {
     try {
       final date = DateTime.parse(dateStr);
-      final months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec'
-      ];
-      return '${months[date.month - 1]} ${date.day}';
+      return DateFormat('MMM d').format(date);
     } catch (_) {
       return dateStr;
     }
@@ -622,7 +610,7 @@ class MyRatingsViewModel extends BaseViewModel {
                 .toList() ??
             [];
       } catch (e) {
-        print('Error fetching peer ratings: $e');
+        AppLogger.log('Error fetching peer ratings: $e');
         _peerRatings = [];
       }
 

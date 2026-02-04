@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:stacked/stacked.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
@@ -7,6 +8,7 @@ import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/services/cache_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 /// View for registering/updating reference face for check-in verification
 class FaceRegistrationView extends StackedView<FaceRegistrationViewModel> {
@@ -470,7 +472,7 @@ class FaceRegistrationViewModel extends BaseViewModel {
         await _cacheService.cacheReferenceFace(result);
       }
     } catch (e) {
-      print('Error loading registered face: $e');
+      AppLogger.log('Error loading registered face: $e');
     } finally {
       setBusy(false);
     }
@@ -546,7 +548,7 @@ class FaceRegistrationViewModel extends BaseViewModel {
         return false;
       }
     } catch (e) {
-      print('Face detection error: $e');
+      AppLogger.log('Face detection error: $e');
       return false;
     }
   }
@@ -610,21 +612,7 @@ class FaceRegistrationViewModel extends BaseViewModel {
     if (isoDate == null) return 'Unknown';
     try {
       final date = DateTime.parse(isoDate);
-      final months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec'
-      ];
-      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+      return DateFormat('MMM d, y').format(date);
     } catch (_) {
       return 'Unknown';
     }

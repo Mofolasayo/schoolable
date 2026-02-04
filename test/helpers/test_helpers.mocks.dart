@@ -9,6 +9,9 @@ import 'dart:ui' as _i6;
 import 'package:flutter/material.dart' as _i4;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:mockito/src/dummies.dart' as _i3;
+import 'package:schoolable/services/backend_api_service.dart' as _i7;
+import 'package:schoolable/services/cache_service.dart' as _i8;
+import 'package:schoolable/services/websocket_service.dart' as _i9;
 import 'package:stacked_services/stacked_services.dart' as _i2;
 
 // ignore_for_file: type=lint
@@ -678,6 +681,2414 @@ class MockDialogService extends _i1.Mock implements _i2.DialogService {
         Invocation.method(
           #completeDialog,
           [response],
+        ),
+        returnValueForMissingStub: null,
+      );
+}
+
+/// A class which mocks [BackendApiService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockBackendApiService extends _i1.Mock implements _i7.BackendApiService {
+  @override
+  _i5.Future<void> clearSession() => (super.noSuchMethod(
+        Invocation.method(
+          #clearSession,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> uploadFile(
+    String? filePath,
+    String? fileName, {
+    String? folder = r'general',
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadFile,
+          [
+            filePath,
+            fileName,
+          ],
+          {#folder: folder},
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> uploadCheckInPhoto(String? filePath) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadCheckInPhoto,
+          [filePath],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> uploadTaskAttachment(
+    int? taskId,
+    String? filePath,
+    String? fileName,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadTaskAttachment,
+          [
+            taskId,
+            filePath,
+            fileName,
+          ],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> uploadAvatar(String? filePath) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadAvatar,
+          [filePath],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> updateProfile({
+    String? fullName,
+    String? jobTitle,
+    String? phone,
+    String? address,
+    String? city,
+    String? state,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateProfile,
+          [],
+          {
+            #fullName: fullName,
+            #jobTitle: jobTitle,
+            #phone: phone,
+            #address: address,
+            #city: city,
+            #state: state,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getTrainingRecords() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getTrainingRecords,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> uploadCertificate(
+    String? filePath,
+    String? name,
+    String? quarter,
+    int? year,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadCertificate,
+          [
+            filePath,
+            name,
+            quarter,
+            year,
+          ],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> uploadBase64({
+    required String? base64Data,
+    String? folder = r'general',
+    String? filename,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadBase64,
+          [],
+          {
+            #base64Data: base64Data,
+            #folder: folder,
+            #filename: filename,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<bool> isStorageAvailable() => (super.noSuchMethod(
+        Invocation.method(
+          #isStorageAvailable,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> uploadChatAttachment(
+    String? channelId,
+    String? filePath,
+    String? fileName,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadChatAttachment,
+          [
+            channelId,
+            filePath,
+            fileName,
+          ],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> uploadAnnouncementImage(
+    String? announcementId,
+    String? filePath,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #uploadAnnouncementImage,
+          [
+            announcementId,
+            filePath,
+          ],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> signUp({
+    required String? email,
+    required String? password,
+    required String? fullName,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #signUp,
+          [],
+          {
+            #email: email,
+            #password: password,
+            #fullName: fullName,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> verifyEmail(String? token) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #verifyEmail,
+          [token],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> resendVerification(String? email) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #resendVerification,
+          [email],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> signIn({
+    required String? email,
+    required String? password,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #signIn,
+          [],
+          {
+            #email: email,
+            #password: password,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getUserProfile(
+          {bool? forceRefresh = false}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getUserProfile,
+          [],
+          {#forceRefresh: forceRefresh},
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<List<String>> getDepartments() => (super.noSuchMethod(
+        Invocation.method(
+          #getDepartments,
+          [],
+        ),
+        returnValue: _i5.Future<List<String>>.value(<String>[]),
+        returnValueForMissingStub: _i5.Future<List<String>>.value(<String>[]),
+      ) as _i5.Future<List<String>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getJobLevels() => (super.noSuchMethod(
+        Invocation.method(
+          #getJobLevels,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getTeamMembers() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getTeamMembers,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getReferenceData() => (super.noSuchMethod(
+        Invocation.method(
+          #getReferenceData,
+          [],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> checkProfileComplete() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #checkProfileComplete,
+          [],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<void> completeProfile({
+    required String? employeeId,
+    required String? phone,
+    required String? department,
+    required String? role,
+    required DateTime? dateJoined,
+    String? gender,
+    DateTime? dateOfBirth,
+    String? address,
+    String? city,
+    String? state,
+    bool? isTeamLead = false,
+    int? employeeLevel,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #completeProfile,
+          [],
+          {
+            #employeeId: employeeId,
+            #phone: phone,
+            #department: department,
+            #role: role,
+            #dateJoined: dateJoined,
+            #gender: gender,
+            #dateOfBirth: dateOfBirth,
+            #address: address,
+            #city: city,
+            #state: state,
+            #isTeamLead: isTeamLead,
+            #employeeLevel: employeeLevel,
+          },
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<bool> hasSession() => (super.noSuchMethod(
+        Invocation.method(
+          #hasSession,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<void> signOut() => (super.noSuchMethod(
+        Invocation.method(
+          #signOut,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<bool> isLoggedIn() => (super.noSuchMethod(
+        Invocation.method(
+          #isLoggedIn,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<String?> getCurrentToken() => (super.noSuchMethod(
+        Invocation.method(
+          #getCurrentToken,
+          [],
+        ),
+        returnValue: _i5.Future<String?>.value(),
+        returnValueForMissingStub: _i5.Future<String?>.value(),
+      ) as _i5.Future<String?>);
+
+  @override
+  _i5.Future<void> debugAuthState() => (super.noSuchMethod(
+        Invocation.method(
+          #debugAuthState,
+          [],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getAnnouncements() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAnnouncements,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getUnreadAnnouncements() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getUnreadAnnouncements,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<void> markAnnouncementAsRead(String? announcementId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #markAnnouncementAsRead,
+          [announcementId],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getMyChannels() => (super.noSuchMethod(
+        Invocation.method(
+          #getMyChannels,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getPublicChannels() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getPublicChannels,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getOrCreateDM(String? otherUserId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getOrCreateDM,
+          [otherUserId],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getMessages(
+    String? channelId, {
+    int? limit = 50,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getMessages,
+          [channelId],
+          {#limit: limit},
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> sendMessage(
+    String? channelId,
+    String? content,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #sendMessage,
+          [
+            channelId,
+            content,
+          ],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<bool> markChannelAsRead(String? channelId) => (super.noSuchMethod(
+        Invocation.method(
+          #markChannelAsRead,
+          [channelId],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<int> getUnreadCount(String? channelId) => (super.noSuchMethod(
+        Invocation.method(
+          #getUnreadCount,
+          [channelId],
+        ),
+        returnValue: _i5.Future<int>.value(0),
+        returnValueForMissingStub: _i5.Future<int>.value(0),
+      ) as _i5.Future<int>);
+
+  @override
+  _i5.Future<bool> sendHeartbeat() => (super.noSuchMethod(
+        Invocation.method(
+          #sendHeartbeat,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<List<String>> getOnlineUserIds() => (super.noSuchMethod(
+        Invocation.method(
+          #getOnlineUserIds,
+          [],
+        ),
+        returnValue: _i5.Future<List<String>>.value(<String>[]),
+        returnValueForMissingStub: _i5.Future<List<String>>.value(<String>[]),
+      ) as _i5.Future<List<String>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> createChannel(
+    String? name,
+    String? type, {
+    List<String>? memberIds,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #createChannel,
+          [
+            name,
+            type,
+          ],
+          {#memberIds: memberIds},
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<bool> joinChannel(String? channelId) => (super.noSuchMethod(
+        Invocation.method(
+          #joinChannel,
+          [channelId],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> leaveChannel(String? channelId) => (super.noSuchMethod(
+        Invocation.method(
+          #leaveChannel,
+          [channelId],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getChannelMembers(String? channelId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getChannelMembers,
+          [channelId],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<bool> addMembersToChannel(
+    String? channelId,
+    List<String>? userIds,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #addMembersToChannel,
+          [
+            channelId,
+            userIds,
+          ],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getAllStaff() => (super.noSuchMethod(
+        Invocation.method(
+          #getAllStaff,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getStaffForChat() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getStaffForChat,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  String? getLastMessageFromChannel(Map<String, dynamic>? channel) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getLastMessageFromChannel,
+          [channel],
+        ),
+        returnValueForMissingStub: null,
+      ) as String?);
+
+  @override
+  Map<String, dynamic>? getOtherUserFromChannel(
+          Map<String, dynamic>? channel) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getOtherUserFromChannel,
+          [channel],
+        ),
+        returnValueForMissingStub: null,
+      ) as Map<String, dynamic>?);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> checkIn({
+    required double? latitude,
+    required double? longitude,
+    double? accuracy,
+    String? address,
+    String? photoUrl,
+    String? deviceInfo,
+    String? deviceId,
+    String? note,
+    bool? isRemote = false,
+    double? livenessScore,
+    String? livenessType,
+    bool? consentGiven,
+    String? consentVersion,
+    int? retentionDays,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #checkIn,
+          [],
+          {
+            #latitude: latitude,
+            #longitude: longitude,
+            #accuracy: accuracy,
+            #address: address,
+            #photoUrl: photoUrl,
+            #deviceInfo: deviceInfo,
+            #deviceId: deviceId,
+            #note: note,
+            #isRemote: isRemote,
+            #livenessScore: livenessScore,
+            #livenessType: livenessType,
+            #consentGiven: consentGiven,
+            #consentVersion: consentVersion,
+            #retentionDays: retentionDays,
+          },
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> checkOut({String? note}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #checkOut,
+          [],
+          {#note: note},
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getTodayAttendance() => (super.noSuchMethod(
+        Invocation.method(
+          #getTodayAttendance,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getAttendanceHistory() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAttendanceHistory,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getOfficeLocations() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getOfficeLocations,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getAttendancePolicyToday() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAttendancePolicyToday,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getLeaveRequests() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getLeaveRequests,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> submitLeaveRequest({
+    required DateTime? startDate,
+    required DateTime? endDate,
+    String? type,
+    String? notes,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #submitLeaveRequest,
+          [],
+          {
+            #startDate: startDate,
+            #endDate: endDate,
+            #type: type,
+            #notes: notes,
+          },
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getReferenceFace() => (super.noSuchMethod(
+        Invocation.method(
+          #getReferenceFace,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> registerReferenceFace(
+          {required String? photoUrl}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #registerReferenceFace,
+          [],
+          {#photoUrl: photoUrl},
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> compareFaces(
+          {required String? checkInPhotoUrl}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #compareFaces,
+          [],
+          {#checkInPhotoUrl: checkInPhotoUrl},
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getCurrentPulseSurvey() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getCurrentPulseSurvey,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<bool> submitPulseSurveyResponse({
+    required String? surveyId,
+    required int? rating,
+    String? comment,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #submitPulseSurveyResponse,
+          [],
+          {
+            #surveyId: surveyId,
+            #rating: rating,
+            #comment: comment,
+          },
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getTasksPendingRating() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getTasksPendingRating,
+          [],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> rateTask({
+    required int? taskId,
+    required int? rating,
+    String? comment,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #rateTask,
+          [],
+          {
+            #taskId: taskId,
+            #rating: rating,
+            #comment: comment,
+          },
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getAverageRating(String? employeeId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAverageRating,
+          [employeeId],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getTasks() => (super.noSuchMethod(
+        Invocation.method(
+          #getTasks,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getTask(int? taskId) => (super.noSuchMethod(
+        Invocation.method(
+          #getTask,
+          [taskId],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<bool> updateTaskStatus(
+    int? taskId,
+    String? status,
+    int? progress,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateTaskStatus,
+          [
+            taskId,
+            status,
+            progress,
+          ],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> updateSubtaskStatus(
+    int? subtaskId,
+    bool? completed,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateSubtaskStatus,
+          [
+            subtaskId,
+            completed,
+          ],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> createTaskComment(
+    int? taskId,
+    String? content,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #createTaskComment,
+          [
+            taskId,
+            content,
+          ],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> updateTaskDescription(
+    int? taskId,
+    String? description,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateTaskDescription,
+          [
+            taskId,
+            description,
+          ],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> completeTask(int? taskId) => (super.noSuchMethod(
+        Invocation.method(
+          #completeTask,
+          [taskId],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> createTask({
+    required String? title,
+    required String? description,
+    required String? organization,
+    String? priority = r'Medium',
+    String? dueDate,
+    List<String>? assigneeIds = const [],
+    String? assigneeId,
+    List<String>? tags = const [],
+    List<Map<String, String>>? subtasks = const [],
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #createTask,
+          [],
+          {
+            #title: title,
+            #description: description,
+            #organization: organization,
+            #priority: priority,
+            #dueDate: dueDate,
+            #assigneeIds: assigneeIds,
+            #assigneeId: assigneeId,
+            #tags: tags,
+            #subtasks: subtasks,
+          },
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> addSubtask(
+    int? taskId,
+    String? title,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #addSubtask,
+          [
+            taskId,
+            title,
+          ],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<bool> deleteTask(int? taskId) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteTask,
+          [taskId],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  String getAvatarUrl(
+    String? gender,
+    String? seed,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAvatarUrl,
+          [
+            gender,
+            seed,
+          ],
+        ),
+        returnValue: _i3.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getAvatarUrl,
+            [
+              gender,
+              seed,
+            ],
+          ),
+        ),
+        returnValueForMissingStub: _i3.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getAvatarUrl,
+            [
+              gender,
+              seed,
+            ],
+          ),
+        ),
+      ) as String);
+
+  @override
+  _i5.Future<bool> resetPasswordForEmail({required String? email}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #resetPasswordForEmail,
+          [],
+          {#email: email},
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> verifyResetCode(String? code) => (super.noSuchMethod(
+        Invocation.method(
+          #verifyResetCode,
+          [code],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> completePasswordReset({
+    required String? code,
+    required String? newPassword,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #completePasswordReset,
+          [],
+          {
+            #code: code,
+            #newPassword: newPassword,
+          },
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getMyAuraDashboard() => (super.noSuchMethod(
+        Invocation.method(
+          #getMyAuraDashboard,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getAuraDashboard(String? employeeId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAuraDashboard,
+          [employeeId],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<bool> submitPeerFeedback({
+    required String? toEmployeeId,
+    required int? supportRating,
+    int? collaborationRating,
+    int? communicationRating,
+    String? strengths,
+    String? areasForImprovement,
+    bool? isAnonymous = true,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #submitPeerFeedback,
+          [],
+          {
+            #toEmployeeId: toEmployeeId,
+            #supportRating: supportRating,
+            #collaborationRating: collaborationRating,
+            #communicationRating: communicationRating,
+            #strengths: strengths,
+            #areasForImprovement: areasForImprovement,
+            #isAnonymous: isAnonymous,
+          },
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getReceivedPeerFeedback() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getReceivedPeerFeedback,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getAutoAuraDashboard() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAutoAuraDashboard,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getAutoAuraDashboardFor(
+          String? employeeId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAutoAuraDashboardFor,
+          [employeeId],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getDepartmentKpis() => (super.noSuchMethod(
+        Invocation.method(
+          #getDepartmentKpis,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<bool> submitExtendedPeerFeedback({
+    required String? toEmployeeId,
+    required String? quarter,
+    required int? year,
+    required int? supportRating,
+    int? collaborationRating,
+    int? adaptabilityRating,
+    int? valuesRating,
+    int? accountabilityRating,
+    int? feedbackRating,
+    int? orgGuidanceRating,
+    int? peopleCultureRating,
+    int? influenceRating,
+    String? strengths,
+    String? areasForImprovement,
+    bool? isAnonymous = true,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #submitExtendedPeerFeedback,
+          [],
+          {
+            #toEmployeeId: toEmployeeId,
+            #quarter: quarter,
+            #year: year,
+            #supportRating: supportRating,
+            #collaborationRating: collaborationRating,
+            #adaptabilityRating: adaptabilityRating,
+            #valuesRating: valuesRating,
+            #accountabilityRating: accountabilityRating,
+            #feedbackRating: feedbackRating,
+            #orgGuidanceRating: orgGuidanceRating,
+            #peopleCultureRating: peopleCultureRating,
+            #influenceRating: influenceRating,
+            #strengths: strengths,
+            #areasForImprovement: areasForImprovement,
+            #isAnonymous: isAnonymous,
+          },
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getPeerFeedbackStatus() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getPeerFeedbackStatus,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getCurrentQuarterCertificateStatus() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getCurrentQuarterCertificateStatus,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<bool> deleteMyAccount() => (super.noSuchMethod(
+        Invocation.method(
+          #deleteMyAccount,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getMyComplianceItems() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getMyComplianceItems,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> submitCompliance({
+    required String? policyId,
+    required String? type,
+    String? fileUrl,
+    String? fileName,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #submitCompliance,
+          [],
+          {
+            #policyId: policyId,
+            #type: type,
+            #fileUrl: fileUrl,
+            #fileName: fileName,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> acknowledgePolicy(String? policyId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #acknowledgePolicy,
+          [policyId],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> submitComplianceDocument({
+    required String? policyId,
+    required String? filePath,
+    required String? fileName,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #submitComplianceDocument,
+          [],
+          {
+            #policyId: policyId,
+            #filePath: filePath,
+            #fileName: fileName,
+          },
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getTeamKpis({
+    String? quarter,
+    int? year,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getTeamKpis,
+          [],
+          {
+            #quarter: quarter,
+            #year: year,
+          },
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getTeamInsight() => (super.noSuchMethod(
+        Invocation.method(
+          #getTeamInsight,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getMyTeamScore({
+    String? quarter,
+    int? year,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getMyTeamScore,
+          [],
+          {
+            #quarter: quarter,
+            #year: year,
+          },
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getMyIndividualKpis({
+    String? quarter,
+    int? year,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getMyIndividualKpis,
+          [],
+          {
+            #quarter: quarter,
+            #year: year,
+          },
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getColleaguesToRate({
+    int? weekNumber,
+    int? year,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getColleaguesToRate,
+          [],
+          {
+            #weekNumber: weekNumber,
+            #year: year,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> submitPeerHelpfulnessRatings(
+    List<Map<String, dynamic>>? ratings, {
+    int? weekNumber,
+    int? year,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #submitPeerHelpfulnessRatings,
+          [ratings],
+          {
+            #weekNumber: weekNumber,
+            #year: year,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getPeerHelpfulnessStatus() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getPeerHelpfulnessStatus,
+          [],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getReceivedRatings({
+    int? weekNumber,
+    int? year,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getReceivedRatings,
+          [],
+          {
+            #weekNumber: weekNumber,
+            #year: year,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> registerDeviceToken({
+    required String? token,
+    required String? platform,
+    String? deviceInfo,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #registerDeviceToken,
+          [],
+          {
+            #token: token,
+            #platform: platform,
+            #deviceInfo: deviceInfo,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> unregisterDeviceToken(
+          {required String? token}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #unregisterDeviceToken,
+          [],
+          {#token: token},
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getNotifications() => (super.noSuchMethod(
+        Invocation.method(
+          #getNotifications,
+          [],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<int> getUnreadNotificationCount() => (super.noSuchMethod(
+        Invocation.method(
+          #getUnreadNotificationCount,
+          [],
+        ),
+        returnValue: _i5.Future<int>.value(0),
+        returnValueForMissingStub: _i5.Future<int>.value(0),
+      ) as _i5.Future<int>);
+
+  @override
+  _i5.Future<bool> markNotificationAsRead(int? notificationId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #markNotificationAsRead,
+          [notificationId],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<bool> markAllNotificationsAsRead() => (super.noSuchMethod(
+        Invocation.method(
+          #markAllNotificationsAsRead,
+          [],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getDepartmentKpiProfile(
+          String? department) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getDepartmentKpiProfile,
+          [department],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<List<Map<String, dynamic>>> getDepartmentAutomationStats() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getDepartmentAutomationStats,
+          [],
+        ),
+        returnValue: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+        returnValueForMissingStub: _i5.Future<List<Map<String, dynamic>>>.value(
+            <Map<String, dynamic>>[]),
+      ) as _i5.Future<List<Map<String, dynamic>>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> createTeamKpi({
+    required String? name,
+    required String? description,
+    required double? targetValue,
+    required String? targetUnit,
+    required int? weight,
+    String? quarter,
+    int? year,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #createTeamKpi,
+          [],
+          {
+            #name: name,
+            #description: description,
+            #targetValue: targetValue,
+            #targetUnit: targetUnit,
+            #weight: weight,
+            #quarter: quarter,
+            #year: year,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> updateTeamKpi({
+    required String? kpiId,
+    double? targetValue,
+    double? currentValue,
+    int? weight,
+    bool? isActive,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateTeamKpi,
+          [],
+          {
+            #kpiId: kpiId,
+            #targetValue: targetValue,
+            #currentValue: currentValue,
+            #weight: weight,
+            #isActive: isActive,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<bool> deleteTeamKpi(String? kpiId) => (super.noSuchMethod(
+        Invocation.method(
+          #deleteTeamKpi,
+          [kpiId],
+        ),
+        returnValue: _i5.Future<bool>.value(false),
+        returnValueForMissingStub: _i5.Future<bool>.value(false),
+      ) as _i5.Future<bool>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getAuditLogs({
+    int? page = 0,
+    int? size = 50,
+    String? entityType,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getAuditLogs,
+          [],
+          {
+            #page: page,
+            #size: size,
+            #entityType: entityType,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getEntityAuditLogs(
+    String? entityType,
+    String? entityId,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getEntityAuditLogs,
+          [
+            entityType,
+            entityId,
+          ],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<List<dynamic>> getMyReports({int? limit}) => (super.noSuchMethod(
+        Invocation.method(
+          #getMyReports,
+          [],
+          {#limit: limit},
+        ),
+        returnValue: _i5.Future<List<dynamic>>.value(<dynamic>[]),
+        returnValueForMissingStub: _i5.Future<List<dynamic>>.value(<dynamic>[]),
+      ) as _i5.Future<List<dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getTodayReport() => (super.noSuchMethod(
+        Invocation.method(
+          #getTodayReport,
+          [],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> submitDailyReport({
+    required String? tasksCompleted,
+    String? tasksInProgress,
+    String? blockers,
+    String? plannedForTomorrow,
+    String? additionalNotes,
+    String? attachmentUrl,
+    String? attachmentName,
+    DateTime? reportDate,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #submitDailyReport,
+          [],
+          {
+            #tasksCompleted: tasksCompleted,
+            #tasksInProgress: tasksInProgress,
+            #blockers: blockers,
+            #plannedForTomorrow: plannedForTomorrow,
+            #additionalNotes: additionalNotes,
+            #attachmentUrl: attachmentUrl,
+            #attachmentName: attachmentName,
+            #reportDate: reportDate,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> updateDailyReport({
+    required int? reportId,
+    String? tasksCompleted,
+    String? tasksInProgress,
+    String? blockers,
+    String? plannedForTomorrow,
+    String? additionalNotes,
+    String? attachmentUrl,
+    String? attachmentName,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #updateDailyReport,
+          [],
+          {
+            #reportId: reportId,
+            #tasksCompleted: tasksCompleted,
+            #tasksInProgress: tasksInProgress,
+            #blockers: blockers,
+            #plannedForTomorrow: plannedForTomorrow,
+            #additionalNotes: additionalNotes,
+            #attachmentUrl: attachmentUrl,
+            #attachmentName: attachmentName,
+          },
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+
+  @override
+  _i5.Future<Map<String, dynamic>> getDailyReportStats() => (super.noSuchMethod(
+        Invocation.method(
+          #getDailyReportStats,
+          [],
+        ),
+        returnValue:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+        returnValueForMissingStub:
+            _i5.Future<Map<String, dynamic>>.value(<String, dynamic>{}),
+      ) as _i5.Future<Map<String, dynamic>>);
+}
+
+/// A class which mocks [CacheService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockCacheService extends _i1.Mock implements _i8.CacheService {
+  @override
+  _i5.Future<String> getOrCreateDeviceId() => (super.noSuchMethod(
+        Invocation.method(
+          #getOrCreateDeviceId,
+          [],
+        ),
+        returnValue: _i5.Future<String>.value(_i3.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getOrCreateDeviceId,
+            [],
+          ),
+        )),
+        returnValueForMissingStub:
+            _i5.Future<String>.value(_i3.dummyValue<String>(
+          this,
+          Invocation.method(
+            #getOrCreateDeviceId,
+            [],
+          ),
+        )),
+      ) as _i5.Future<String>);
+
+  @override
+  bool isCacheValid(
+    String? key,
+    int? maxAgeMinutes,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #isCacheValid,
+          [
+            key,
+            maxAgeMinutes,
+          ],
+        ),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
+  _i5.Future<void> setActiveUser(String? userId) => (super.noSuchMethod(
+        Invocation.method(
+          #setActiveUser,
+          [userId],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<T?> get<T>(String? key) => (super.noSuchMethod(
+        Invocation.method(
+          #get,
+          [key],
+        ),
+        returnValue: _i5.Future<T?>.value(),
+        returnValueForMissingStub: _i5.Future<T?>.value(),
+      ) as _i5.Future<T?>);
+
+  @override
+  _i5.Future<void> set(
+    String? key,
+    dynamic data,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #set,
+          [
+            key,
+            data,
+          ],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> remove(String? key) => (super.noSuchMethod(
+        Invocation.method(
+          #remove,
+          [key],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> clearAll({bool? clearUserScope = false}) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #clearAll,
+          [],
+          {#clearUserScope: clearUserScope},
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getCachedProfile() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedProfile,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheProfile(Map<String, dynamic>? profile) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheProfile,
+          [profile],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<dynamic>?> getCachedAnnouncements() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedAnnouncements,
+          [],
+        ),
+        returnValue: _i5.Future<List<dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<List<dynamic>?>.value(),
+      ) as _i5.Future<List<dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheAnnouncements(List<dynamic>? announcements) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheAnnouncements,
+          [announcements],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<dynamic>?> getCachedTasks() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedTasks,
+          [],
+        ),
+        returnValue: _i5.Future<List<dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<List<dynamic>?>.value(),
+      ) as _i5.Future<List<dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheTasks(List<dynamic>? tasks) => (super.noSuchMethod(
+        Invocation.method(
+          #cacheTasks,
+          [tasks],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<dynamic>?> getCachedChannels() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedChannels,
+          [],
+        ),
+        returnValue: _i5.Future<List<dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<List<dynamic>?>.value(),
+      ) as _i5.Future<List<dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheChannels(List<dynamic>? channels) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheChannels,
+          [channels],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<dynamic>?> getCachedDirectMessages() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedDirectMessages,
+          [],
+        ),
+        returnValue: _i5.Future<List<dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<List<dynamic>?>.value(),
+      ) as _i5.Future<List<dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheDirectMessages(List<dynamic>? dms) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheDirectMessages,
+          [dms],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<dynamic>?> getCachedAttendanceHistory() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getCachedAttendanceHistory,
+          [],
+        ),
+        returnValue: _i5.Future<List<dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<List<dynamic>?>.value(),
+      ) as _i5.Future<List<dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheAttendanceHistory(List<dynamic>? history) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheAttendanceHistory,
+          [history],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getCachedTodayAttendance() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getCachedTodayAttendance,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheTodayAttendance(Map<String, dynamic>? attendance) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheTodayAttendance,
+          [attendance],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<List<dynamic>?> getCachedMessages(String? channelId) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getCachedMessages,
+          [channelId],
+        ),
+        returnValue: _i5.Future<List<dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<List<dynamic>?>.value(),
+      ) as _i5.Future<List<dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheMessages(
+    String? channelId,
+    List<dynamic>? messages,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheMessages,
+          [
+            channelId,
+            messages,
+          ],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> addMessageToCache(
+    String? channelId,
+    Map<String, dynamic>? message,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #addMessageToCache,
+          [
+            channelId,
+            message,
+          ],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getCachedHomeStats() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedHomeStats,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheHomeStats(Map<String, dynamic>? stats) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheHomeStats,
+          [stats],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getCachedAuraScore() => (super.noSuchMethod(
+        Invocation.method(
+          #getCachedAuraScore,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheAuraScore(Map<String, dynamic>? aura) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheAuraScore,
+          [aura],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<Map<String, dynamic>?> getCachedReferenceFace() =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #getCachedReferenceFace,
+          [],
+        ),
+        returnValue: _i5.Future<Map<String, dynamic>?>.value(),
+        returnValueForMissingStub: _i5.Future<Map<String, dynamic>?>.value(),
+      ) as _i5.Future<Map<String, dynamic>?>);
+
+  @override
+  _i5.Future<void> cacheReferenceFace(Map<String, dynamic>? faceData) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #cacheReferenceFace,
+          [faceData],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+}
+
+/// A class which mocks [WebSocketService].
+///
+/// See the documentation for Mockito's code generation for more information.
+class MockWebSocketService extends _i1.Mock implements _i9.WebSocketService {
+  @override
+  bool get isConnected => (super.noSuchMethod(
+        Invocation.getter(#isConnected),
+        returnValue: false,
+        returnValueForMissingStub: false,
+      ) as bool);
+
+  @override
+  _i5.Future<void> connect(String? token) => (super.noSuchMethod(
+        Invocation.method(
+          #connect,
+          [token],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  void disconnect() => super.noSuchMethod(
+        Invocation.method(
+          #disconnect,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void subscribeToChannel(
+    String? channelId, {
+    required _i9.MessageCallback? onMessage,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #subscribeToChannel,
+          [channelId],
+          {#onMessage: onMessage},
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void unsubscribeFromChannel(
+    String? channelId, {
+    _i9.MessageCallback? callback,
+  }) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #unsubscribeFromChannel,
+          [channelId],
+          {#callback: callback},
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void subscribeToPresence({required _i9.MessageCallback? onUpdate}) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #subscribeToPresence,
+          [],
+          {#onUpdate: onUpdate},
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void unsubscribeFromPresence(_i9.MessageCallback? callback) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #unsubscribeFromPresence,
+          [callback],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void subscribeToNotifications(
+          {required _i9.MessageCallback? onNotification}) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #subscribeToNotifications,
+          [],
+          {#onNotification: onNotification},
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void addConnectionListener(_i9.ConnectionCallback? callback) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #addConnectionListener,
+          [callback],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void removeConnectionListener(_i9.ConnectionCallback? callback) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #removeConnectionListener,
+          [callback],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void sendMessage(
+    String? channelId,
+    String? content,
+  ) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #sendMessage,
+          [
+            channelId,
+            content,
+          ],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void sendTyping(
+    String? channelId,
+    bool? isTyping,
+  ) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #sendTyping,
+          [
+            channelId,
+            isTyping,
+          ],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void updatePresence(String? status) => super.noSuchMethod(
+        Invocation.method(
+          #updatePresence,
+          [status],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void dispose() => super.noSuchMethod(
+        Invocation.method(
+          #dispose,
+          [],
         ),
         returnValueForMissingStub: null,
       );

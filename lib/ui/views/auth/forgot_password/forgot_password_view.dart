@@ -23,7 +23,7 @@ class ForgotPasswordView extends StackedView<ForgotPasswordViewModel> {
                 // Logo
                 Center(
                   child: Image.asset(
-                    'assets/images/schoolable_logo.png',
+                    'assets/images/worksight_logo.png',
                     width: 72,
                     height: 72,
                   ),

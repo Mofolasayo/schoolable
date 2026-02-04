@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:schoolable/app/app.locator.dart';
+import 'package:schoolable/services/backend_api_service.dart';
+import 'package:schoolable/services/websocket_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/compliance/compliance_submission_view.dart';
 import 'package:schoolable/ui/views/home/announcement_detail_view.dart';
@@ -18,14 +21,23 @@ class AnnouncementsView extends StatefulWidget {
 class _AnnouncementsViewState extends State<AnnouncementsView> {
   List<Announcement>? _allAnnouncements;
   bool _isLoading = true;
+  final _backendService = locator<BackendApiService>();
+  final _wsService = locator<WebSocketService>();
+  MessageCallback? _notificationHandler;
 
   @override
   void initState() {
     super.initState();
     _loadAnnouncements();
+    _subscribeToRealtimeUpdates();
   }
 
   Future<void> _loadAnnouncements() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
     final data = await widget.viewModel.fetchAllAnnouncements();
     if (mounted) {
       setState(() {
@@ -33,6 +45,38 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _subscribeToRealtimeUpdates() async {
+    if (_notificationHandler != null) {
+      return;
+    }
+
+    if (!_wsService.isConnected) {
+      final token = await _backendService.getCurrentToken();
+      if (token != null) {
+        await _wsService.connect(token);
+      }
+    }
+
+    _notificationHandler = (message) {
+      final notificationType =
+          message.data['notificationType']?.toString() ?? '';
+      if (notificationType.contains('announcement')) {
+        _loadAnnouncements();
+      }
+    };
+
+    _wsService.subscribeToNotifications(onNotification: _notificationHandler!);
+  }
+
+  @override
+  void dispose() {
+    if (_notificationHandler != null) {
+      _wsService.unsubscribeFromNotifications(_notificationHandler!);
+      _notificationHandler = null;
+    }
+    super.dispose();
   }
 
   Color _getAnnouncementColor(String type) {
@@ -49,77 +93,91 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
 
   @override
   Widget build(BuildContext context) {
-    // Combine lists for display, or show sections?
-    // Let's show sections: "Action Required" vs "Notifications"
-    final complianceItems = widget.viewModel.complianceItems;
-    final announcements = _allAnnouncements;
-
-    final isEmpty = (complianceItems.isEmpty) &&
-        (announcements == null || announcements.isEmpty);
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: kcBackgroundColor,
       appBar: AppBar(
         title: const Text('Notifications',
             style: TextStyle(color: kcTextColor, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.white,
+        backgroundColor: kcBackgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: kcTextColor),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: _isLoading
-          ? const Center(child: CupertinoActivityIndicator())
-          : isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.notifications_off_outlined,
-                          size: 48, color: Colors.grey[300]),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No notifications',
-                        style: TextStyle(color: Colors.grey[500]),
-                      ),
-                    ],
+      body: AnimatedBuilder(
+        animation: widget.viewModel,
+        builder: (context, _) {
+          // Combine lists for display, or show sections?
+          // Let's show sections: "Action Required" vs "Notifications"
+          final complianceItems = widget.viewModel.complianceItems.where((item) {
+            final status = item.status.toLowerCase();
+            return status == 'pending' || status == 'rejected';
+          }).toList();
+          final announcements = _allAnnouncements
+              ?.where((announcement) => !announcement.isRead)
+              .toList();
+
+          final isEmpty = (complianceItems.isEmpty) &&
+              (announcements == null || announcements.isEmpty);
+
+          if (_isLoading) {
+            return const Center(child: CupertinoActivityIndicator());
+          }
+
+          if (isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.notifications_off_outlined,
+                      size: 48, color: kcBorderColor),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No notifications',
+                    style: TextStyle(color: kcTextMutedColor),
                   ),
-                )
-              : ListView(
-                  padding: const EdgeInsets.all(24),
-                  children: [
-                    if (complianceItems.isNotEmpty) ...[
-                      const Text(
-                        'Action Required',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: kcTextMutedColor,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...complianceItems
-                          .map((item) => _buildComplianceItem(context, item)),
-                      const SizedBox(height: 24),
-                    ],
-                    if (announcements != null && announcements.isNotEmpty) ...[
-                      const Text(
-                        'Recent Updates',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: kcTextMutedColor,
-                          letterSpacing: 1.0,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...announcements
-                          .map((a) => _buildAnnouncementItem(context, a)),
-                    ],
-                  ],
+                ],
+              ),
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.all(24),
+            children: [
+              if (complianceItems.isNotEmpty) ...[
+                const Text(
+                  'Action Required',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: kcTextMutedColor,
+                    letterSpacing: 1.0,
+                  ),
                 ),
+                const SizedBox(height: 12),
+                ...complianceItems
+                    .map((item) => _buildComplianceItem(context, item)),
+                const SizedBox(height: 24),
+              ],
+              if (announcements != null && announcements.isNotEmpty) ...[
+                const Text(
+                  'Recent Updates',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: kcTextMutedColor,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...announcements
+                    .map((a) => _buildAnnouncementItem(context, a)),
+              ],
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -130,7 +188,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: kcSurfaceColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: kcBorderColor),
         ),
@@ -233,9 +291,9 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
           MaterialPageRoute(
             builder: (context) => AnnouncementDetailView(
               announcement: a,
-              onMarkAsRead: () {
-                widget.viewModel.markAsRead(a);
-                if (mounted) setState(() => _loadAnnouncements());
+              onMarkAsRead: () async {
+                await widget.viewModel.markAsRead(a);
+                await _loadAnnouncements();
               },
             ),
           ),
@@ -245,11 +303,10 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: a.isRead ? Colors.white : kcPrimaryColor.withOpacity(0.04),
+          color: kcSurfaceColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color:
-                a.isRead ? Colors.grey[200]! : kcPrimaryColor.withOpacity(0.2),
+            color: kcBorderColor,
           ),
         ),
         child: Column(
@@ -286,7 +343,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
               a.title,
               style: TextStyle(
                 fontSize: 15,
-                fontWeight: a.isRead ? FontWeight.w500 : FontWeight.w600,
+                fontWeight: FontWeight.w600,
                 color: kcTextColor,
               ),
             ),
@@ -298,28 +355,9 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                 color: kcTextMutedColor,
                 height: 1.4,
               ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
-            if (!a.isRead) ...[
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () {
-                    widget.viewModel.markAsRead(a);
-                    setState(() {
-                      _loadAnnouncements();
-                    });
-                  },
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 0),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text('Mark as Read',
-                      style: TextStyle(fontSize: 12)),
-                ),
-              )
-            ]
           ],
         ),
       ),
@@ -463,7 +501,7 @@ class _AnnouncementsViewState extends State<AnnouncementsView> {
                 elevation: 0,
               ),
               child: const Text(
-                'Complete Action',
+                'Acknowledge',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,

@@ -31,6 +31,40 @@ class Task {
   final List<Comment> comments;
   final List<Attachment> attachments;
 
+  Task copyWith({
+    int? id,
+    String? title,
+    String? description,
+    String? due,
+    String? status,
+    String? priority,
+    String? tag,
+    String? assignee,
+    String? assigneeAvatar,
+    String? department,
+    int? progress,
+    List<Subtask>? subtasks,
+    List<Comment>? comments,
+    List<Attachment>? attachments,
+  }) {
+    return Task(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      due: due ?? this.due,
+      status: status ?? this.status,
+      priority: priority ?? this.priority,
+      tag: tag ?? this.tag,
+      assignee: assignee ?? this.assignee,
+      assigneeAvatar: assigneeAvatar ?? this.assigneeAvatar,
+      department: department ?? this.department,
+      progress: progress ?? this.progress,
+      subtasks: subtasks ?? this.subtasks,
+      comments: comments ?? this.comments,
+      attachments: attachments ?? this.attachments,
+    );
+  }
+
   factory Task.fromMap(Map<String, dynamic> map) {
     // Helper to format due date
     String formatDue(String? dateStr) {
@@ -117,7 +151,7 @@ class Task {
       title: map['title'] ?? 'Untitled',
       description: map['description'] ?? '',
       due: formatDue(map['due_date']),
-      status: map['status'] ?? 'Pending',
+      status: map['status'] ?? 'TODO',
       priority: map['priority'] ?? 'Medium',
       tag: tagStr,
       assignee: assigneeName ?? 'Unassigned',

@@ -10,6 +10,7 @@ import 'package:schoolable/ui/views/auth/reset_password/reset_password_view.dart
 import 'package:schoolable/ui/views/onboarding/onboarding_view.dart';
 import 'package:schoolable/ui/views/auth/verify_otp/verify_otp_view.dart';
 import 'package:schoolable/ui/views/profile/growth_view.dart';
+import 'package:schoolable/ui/views/profile/leave/leave_view.dart';
 import 'package:schoolable/ui/views/profile/security_view.dart';
 import 'package:stacked/stacked_annotations.dart';
 import 'package:stacked_services/stacked_services.dart';
@@ -30,6 +31,7 @@ import 'package:schoolable/services/websocket_service.dart';
     MaterialRoute(page: OnboardingView),
     MaterialRoute(page: VerifyOtpView),
     MaterialRoute(page: GrowthView),
+    MaterialRoute(page: LeaveView),
     MaterialRoute(page: SecurityView),
     // @stacked-route
   ],

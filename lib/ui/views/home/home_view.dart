@@ -10,27 +10,51 @@ import 'package:schoolable/ui/views/tasks/task_detail_view.dart';
 import 'package:schoolable/ui/views/home/announcements_view.dart';
 import 'package:schoolable/ui/views/home/aura_detail_view.dart';
 import 'package:schoolable/ui/views/home/announcement_detail_view.dart';
-import 'package:schoolable/ui/views/home/team_insights_view.dart';
+import 'package:schoolable/ui/views/home/team_score_view.dart';
 import 'package:schoolable/ui/common/widgets/app_avatar.dart';
-
+import 'package:schoolable/ui/views/compliance/compliance_list_view.dart';
 import 'package:schoolable/ui/views/compliance/compliance_submission_view.dart';
 import 'package:schoolable/ui/views/home/peer_helpfulness_view.dart';
 import 'package:schoolable/ui/views/tasks/task_rating_modal.dart';
-
 import 'home_viewmodel.dart';
 
 class HomeView extends StackedView<HomeViewModel> {
-  const HomeView({Key? key, this.initialTab = 0}) : super(key: key);
+  const HomeView({
+    Key? key,
+    this.initialTab = 0,
+    this.buildAllTabs = true,
+  }) : super(key: key);
 
   final int initialTab;
+  final bool buildAllTabs;
 
   @override
   Widget builder(BuildContext context, HomeViewModel viewModel, Widget? child) {
+    final pages = [
+      const _HomeContent(),
+      const TasksView(),
+      const AttendanceView(),
+      const ReportsView(),
+      ProfileView(userProfile: {
+        'full_name': viewModel.userName,
+        'job_title': viewModel.userRole,
+        'department': viewModel.userDepartment,
+        'status': viewModel.userStatus,
+        'gender': viewModel.userGender,
+        'avatar_url': viewModel.avatarUrl,
+      }),
+    ];
+
+    final body = buildAllTabs
+        ? IndexedStack(
+            index: viewModel.currentTab,
+            children: pages,
+          )
+        : pages[viewModel.currentTab];
+
     return Scaffold(
       backgroundColor: kcBackgroundColor,
-      body: viewModel.isBusy
-          ? const Center(child: CupertinoActivityIndicator())
-          : _getViewForIndex(viewModel.currentTab, viewModel),
+      body: body,
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -75,32 +99,6 @@ class HomeView extends StackedView<HomeViewModel> {
     );
   }
 
-  Widget _getViewForIndex(int index, HomeViewModel viewModel) {
-    switch (index) {
-      case 0:
-        return const _HomeContent();
-      case 1:
-        return const TasksView();
-      case 2:
-        return const AttendanceView();
-      case 3:
-        return const ReportsView();
-      case 4:
-        // Pass cached profile data to avoid flickering
-        return ProfileView(userProfile: {
-          'full_name': viewModel.userName,
-          'job_title': viewModel
-              .userRole, // userRole already contains job_title from HomeViewModel
-          'department': viewModel.userDepartment,
-          'status': viewModel.userStatus,
-          'gender': viewModel.userGender,
-          'avatar_url': viewModel.avatarUrl,
-        });
-      default:
-        return const _HomeContent();
-    }
-  }
-
   @override
   HomeViewModel viewModelBuilder(BuildContext context) => HomeViewModel();
 
@@ -115,6 +113,13 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
 
   @override
   Widget build(BuildContext context, HomeViewModel viewModel) {
+    final unreadAnnouncements =
+        viewModel.announcements.where((a) => !a.isRead).toList();
+    final actionableComplianceItems = viewModel.complianceItems.where((item) {
+      final status = item.status.toLowerCase();
+      return status == 'pending' || status == 'rejected';
+    }).toList();
+
     return SafeArea(
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -215,67 +220,52 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                           ),
                         ],
                       ),
-                      Row(
-                        children: [
-                          // Status Badge
-                          const SizedBox(width: 8),
-                          // Notifications Button
-                          InkWell(
-                            onTap: () =>
-                                _showAllAnnouncements(context, viewModel),
+                      InkWell(
+                        onTap: () => _showAllAnnouncements(context, viewModel),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(12),
-                            child: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: kcBorderColor),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.03),
-                                    blurRadius: 10,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                children: [
-                                  const Icon(
-                                    Icons.notifications_outlined,
-                                    color: kcTextColor,
-                                    size: 22,
-                                  ),
-                                  if (viewModel.announcements.isNotEmpty)
-                                    Positioned(
-                                      top: -2,
-                                      right: -2,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: const BoxDecoration(
-                                          color: kcRoseColor,
-                                          shape: BoxShape.circle,
-                                        ),
-                                        constraints: const BoxConstraints(
-                                          minWidth: 16,
-                                          minHeight: 16,
-                                        ),
-                                        child: Text(
-                                          '${viewModel.announcements.length}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
+                            border: Border.all(color: kcBorderColor),
                           ),
-                        ],
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              const Icon(
+                                Icons.notifications_outlined,
+                                color: kcTextColor,
+                                size: 22,
+                              ),
+                              if (unreadAnnouncements.isNotEmpty)
+                                Positioned(
+                                  top: -2,
+                                  right: -2,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: kcRoseColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      '${unreadAnnouncements.length}',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -487,130 +477,6 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                     ),
                   ],
 
-                  // Action Required (Compliance)
-                  if (viewModel.complianceItems.isNotEmpty) ...[
-                    const Row(
-                      children: [
-                        Icon(Icons.assignment_late_outlined,
-                            size: 16, color: kcTextColor),
-                        SizedBox(width: 8),
-                        Text(
-                          'Action Required',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: kcTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 140,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: viewModel.complianceItems.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final item = viewModel.complianceItems[index];
-                          return GestureDetector(
-                            onTap: () => _showComplianceDetails(context, item),
-                            child: Container(
-                              width: 280,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(color: kcBorderColor),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color:
-                                              kcPrimaryColor.withOpacity(0.1),
-                                          borderRadius:
-                                              BorderRadius.circular(8),
-                                        ),
-                                        child: const Row(
-                                          children: [
-                                            Icon(Icons.assignment_late_outlined,
-                                                size: 12,
-                                                color: kcPrimaryColor),
-                                            SizedBox(width: 4),
-                                            Text(
-                                              'ACTION',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                                color: kcPrimaryColor,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      if (item.status == 'pending')
-                                        const Icon(Icons.circle,
-                                            size: 8, color: kcRoseColor),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    item.title,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w600,
-                                      color: kcTextColor,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Expanded(
-                                    child: Text(
-                                      item.description,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: kcTextMutedColor,
-                                        height: 1.4,
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.access_time_rounded,
-                                          size: 12, color: kcAmberColor),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'Due: ${item.deadline.toString().split(' ')[0]}',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.w500,
-                                          color: kcAmberColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-
                   // KPI Grid
                   GridView.builder(
                     shrinkWrap: true,
@@ -625,7 +491,8 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                     itemCount: viewModel.kpiCards.length,
                     itemBuilder: (context, index) {
                       final kpi = viewModel.kpiCards[index];
-                      final isTeamScore = kpi.label == 'Team Score';
+                      final isTeamScore =
+                          kpi.label.toLowerCase().contains('team');
 
                       return GestureDetector(
                         onTap: isTeamScore
@@ -634,7 +501,7 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                                   context,
                                   MaterialPageRoute(
                                     builder: (context) =>
-                                        const TeamInsightsView(),
+                                        const TeamScoreView(),
                                   ),
                                 );
                               }
@@ -765,8 +632,472 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                   _buildAuraScoreCard(context, viewModel),
                   const SizedBox(height: 24),
 
-                  // Task Distribution Section
-                  Container(
+                  if (unreadAnnouncements.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Announcements',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: kcTextColor,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () =>
+                              _showAllAnnouncements(context, viewModel),
+                          child: const Text(
+                            'See all',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: kcPrimaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 130,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: unreadAnnouncements.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          final announcement = unreadAnnouncements[index];
+                          return GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => AnnouncementDetailView(
+                                    announcement: announcement,
+                                    onMarkAsRead: () =>
+                                        viewModel.markAsRead(announcement),
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Container(
+                              width: 260,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: kcBorderColor,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.campaign_rounded,
+                                        size: 16,
+                                        color: _getAnnouncementColor(
+                                            announcement.type),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Announcement',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: _getAnnouncementColor(
+                                              announcement.type),
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        announcement.time,
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: kcTextMutedColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    announcement.title,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: kcTextColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    announcement.message,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: kcTextMutedColor,
+                                      height: 1.4,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  if (actionableComplianceItems.isNotEmpty) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Compliance',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: kcTextColor,
+                          ),
+                        ),
+                        InkWell(
+                          onTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ComplianceListView(viewModel: viewModel),
+                              ),
+                            );
+                          },
+                          child: const Text(
+                            'See all',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: kcPrimaryColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      height: 130,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: actionableComplianceItems.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(width: 12),
+                        itemBuilder: (context, index) {
+                          final item = actionableComplianceItems[index];
+                          return GestureDetector(
+                            onTap: () async {
+                              final result = await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ComplianceSubmissionView(item: item),
+                                ),
+                              );
+                              if (result == true) {
+                                viewModel.refreshCompliance();
+                              }
+                            },
+                            child: Container(
+                              width: 260,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: kcBorderColor,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.assignment_late_outlined,
+                                        size: 16,
+                                        color: kcPrimaryColor,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      const Text(
+                                        'Compliance',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: kcPrimaryColor,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        item.deadline
+                                            .toString()
+                                            .split(' ')[0],
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          color: kcTextMutedColor,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    item.title,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: kcTextColor,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    item.description,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: kcTextMutedColor,
+                                      height: 1.4,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+
+                  // Today's Tasks
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Today\'s Tasks',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: kcTextColor,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => viewModel.setTab(1),
+                        child: const Text(
+                          'View All',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: kcPrimaryColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (viewModel.todayTasks.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 48, horizontal: 32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: kcBorderColor),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.task_alt_rounded,
+                            size: 48,
+                            color: kcTextMutedColor.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'No tasks available for you',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: kcTextMutedColor,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Tasks assigned to you will appear here',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: kcTextMutedColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else
+                    Builder(builder: (context) {
+                      final tasks = viewModel.todayTasks.take(5).toList();
+                      return ListView.separated(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: tasks.length,
+                        separatorBuilder: (context, index) =>
+                            const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final task = tasks[index];
+                          final isCompleted =
+                              viewModel.isTaskCompleted(task.status);
+                          final showPriority =
+                              task.priority.trim().toLowerCase() != 'medium';
+                          return InkWell(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TaskDetailView(
+                                  task: task,
+                                  onTaskUpdated: viewModel.updateTask,
+                                ),
+                              ),
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: kcBorderColor),
+                            ),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: isCompleted
+                                          ? kcPrimaryColor
+                                          : kcBorderColor,
+                                      width: 2,
+                                    ),
+                                    color: isCompleted
+                                        ? kcPrimaryColor
+                                        : Colors.transparent,
+                                  ),
+                                  child: isCompleted
+                                      ? const Icon(Icons.check,
+                                          size: 12, color: Colors.white)
+                                      : null,
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        task.title,
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: kcTextColor,
+                                          decoration: isCompleted
+                                              ? TextDecoration.lineThrough
+                                              : null,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          if (isCompleted)
+                                            const Row(
+                                              children: [
+                                                Icon(
+                                                    Icons
+                                                        .check_circle_rounded,
+                                                    size: 12,
+                                                    color: kcTextMutedColor),
+                                                SizedBox(width: 4),
+                                                Text(
+                                                  'Done',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: kcTextMutedColor,
+                                                  ),
+                                                ),
+                                              ],
+                                            )
+                                          else ...[
+                                            const Icon(Icons.access_time,
+                                                size: 12,
+                                                color: kcTextMutedColor),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              task.due,
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: kcTextMutedColor,
+                                              ),
+                                            ),
+                                          ],
+                                          if (showPriority) ...[
+                                            const SizedBox(width: 8),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 6,
+                                                      vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: _getPriorityColor(
+                                                        task.priority)
+                                                    .withValues(alpha: 0.1),
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                task.priority,
+                                                style: TextStyle(
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: _getPriorityColor(
+                                                      task.priority),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                        },
+                      );
+                    }),
+                     // Task Distribution Section
+                  
+                  const SizedBox(height: 24),
+                    Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
                       color: Colors.white,
@@ -943,306 +1274,6 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-
-                  // Announcements
-                  if (viewModel.announcements.isNotEmpty) ...[
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Announcements',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: kcTextColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 130,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: viewModel.announcements.length,
-                        separatorBuilder: (context, index) =>
-                            const SizedBox(width: 12),
-                        itemBuilder: (context, index) {
-                          final announcement = viewModel.announcements[index];
-                          return GestureDetector(
-                            onTap: () {
-                              // Navigate to announcement detail page
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => AnnouncementDetailView(
-                                    announcement: announcement,
-                                    onMarkAsRead: () =>
-                                        viewModel.markAsRead(announcement),
-                                  ),
-                                ),
-                              );
-                            },
-                            child: Container(
-                              width: 260,
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: kcBorderColor,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.02),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.campaign_rounded,
-                                        size: 16,
-                                        color: _getAnnouncementColor(
-                                            announcement.type),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Announcement',
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: _getAnnouncementColor(
-                                              announcement.type),
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        announcement.time,
-                                        style: const TextStyle(
-                                          fontSize: 10,
-                                          color: kcTextMutedColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    announcement.title,
-                                    style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: kcTextColor,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    announcement.message,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: kcTextMutedColor,
-                                      height: 1.4,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-
-                  // Today's Tasks
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Today\'s Tasks',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: kcTextColor,
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () => viewModel.setTab(1),
-                        child: const Text(
-                          'View All',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: kcPrimaryColor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (viewModel.todayTasks.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 48, horizontal: 32),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: kcBorderColor),
-                      ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.task_alt_rounded,
-                            size: 48,
-                            color: kcTextMutedColor.withValues(alpha: 0.5),
-                          ),
-                          const SizedBox(height: 16),
-                          const Text(
-                            'No tasks available for you',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: kcTextMutedColor,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Tasks assigned to you will appear here',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: kcTextMutedColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: viewModel.todayTasks.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final task = viewModel.todayTasks[index];
-                        return InkWell(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    TaskDetailView(task: task),
-                              ),
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(16),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: kcBorderColor),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 20,
-                                  height: 20,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                      color: task.status == 'Completed'
-                                          ? kcPrimaryColor
-                                          : kcBorderColor,
-                                      width: 2,
-                                    ),
-                                    color: task.status == 'Completed'
-                                        ? kcPrimaryColor
-                                        : Colors.transparent,
-                                  ),
-                                  child: task.status == 'Completed'
-                                      ? const Icon(Icons.check,
-                                          size: 12, color: Colors.white)
-                                      : null,
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        task.title,
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w500,
-                                          color: kcTextColor,
-                                          decoration: task.status == 'Completed'
-                                              ? TextDecoration.lineThrough
-                                              : null,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.access_time,
-                                              size: 12,
-                                              color: kcTextMutedColor),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            task.due,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: kcTextMutedColor,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: _getPriorityColor(
-                                                      task.priority)
-                                                  .withValues(alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              task.priority,
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.bold,
-                                                color: _getPriorityColor(
-                                                    task.priority),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
                 ],
               ),
             ),
@@ -1363,9 +1394,13 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
   /// Build the Aura Score card widget
   Widget _buildAuraScoreCard(BuildContext context, HomeViewModel viewModel) {
     final auraData = viewModel.auraData;
+    final auraScore = (auraData?.qgpa ?? 0) > 0
+        ? auraData!.qgpa
+        : (auraData?.auraScore ?? 0.0) / 20;
+    final auraScoreText = auraScore.toStringAsFixed(1);
 
     // Loading or no data yet
-    if (viewModel.isLoadingAura || auraData == null) {
+    if (viewModel.isLoadingAura) {
       return Container(
         height: 180,
         decoration: BoxDecoration(
@@ -1388,6 +1423,48 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
                 ),
               ),
             ],
+          ),
+        ),
+      );
+    }
+
+    if (auraData == null) {
+      return GestureDetector(
+        onTap: () => viewModel.refresh(),
+        child: Container(
+          height: 180,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: kcBorderColor),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(CupertinoIcons.exclamationmark_triangle,
+                    color: kcAmberColor),
+                const SizedBox(height: 12),
+                Text(
+                  viewModel.auraLoadFailed
+                      ? 'Aura data unavailable'
+                      : 'No Aura data yet',
+                  style: const TextStyle(
+                    color: kcTextMutedColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                const Text(
+                  'Tap to retry',
+                  style: TextStyle(
+                    color: kcTextMutedColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -1417,13 +1494,13 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
               height: 80,
               child: CustomPaint(
                 painter: _RadialProgressPainter(
-                  value: auraData.auraScore / 100,
+                  value: auraScore / 5,
                   color: kcPrimaryColor,
                   backgroundColor: kcBackgroundColor,
                 ),
                 child: Center(
                   child: Text(
-                    '${auraData.auraScore.round()}',
+                    auraScoreText,
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w700,
@@ -1494,158 +1571,6 @@ class _HomeContent extends ViewModelWidget<HomeViewModel> {
       default:
         return kcTextColor;
     }
-  }
-
-  void _showComplianceDetails(BuildContext context, ComplianceItem item) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: kcPrimaryColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.assignment_late_outlined,
-                      color: kcPrimaryColor, size: 24),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Compliance Required',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: kcTextMutedColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        item.title,
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: kcTextColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Description',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: kcTextColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              item.description,
-              style: const TextStyle(
-                fontSize: 15,
-                color: kcTextMutedColor,
-                height: 1.6,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: kcAmberColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: kcAmberColor.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.access_time_rounded, color: kcAmberColor),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Deadline',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: kcTextColor,
-                          ),
-                        ),
-                        Text(
-                          'Complete by ${item.deadline.toString().split(' ')[0]}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: kcTextMutedColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Spacer(),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Close sheet
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => ComplianceSubmissionView(item: item),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: kcPrimaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              child: const Text(
-                'Complete Action',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
   }
 }
 

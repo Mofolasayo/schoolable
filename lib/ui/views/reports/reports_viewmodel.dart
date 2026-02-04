@@ -3,6 +3,7 @@ import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/services/cache_service.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 class ReportsViewModel extends BaseViewModel {
   final BackendApiService _api = locator<BackendApiService>();
@@ -20,6 +21,45 @@ class ReportsViewModel extends BaseViewModel {
   bool _hasSubmittedToday = false;
   bool get hasSubmittedToday => _hasSubmittedToday;
 
+  Map<String, dynamic>? _submissionWindow;
+  Map<String, dynamic>? get submissionWindow => _submissionWindow;
+
+  DateTime? _historyStartDate;
+  DateTime? _historyEndDate;
+  bool get hasHistoryFilter =>
+      _historyStartDate != null && _historyEndDate != null;
+
+  String get historyRangeLabel {
+    if (!hasHistoryFilter) {
+      return 'All dates';
+    }
+    return '${_formatDate(_historyStartDate!)} - ${_formatDate(_historyEndDate!)}';
+  }
+
+  List<Map<String, dynamic>> get filteredReports {
+    if (!hasHistoryFilter) {
+      return _reports;
+    }
+    final start = DateTime(
+      _historyStartDate!.year,
+      _historyStartDate!.month,
+      _historyStartDate!.day,
+    );
+    final end = DateTime(
+      _historyEndDate!.year,
+      _historyEndDate!.month,
+      _historyEndDate!.day,
+      23,
+      59,
+      59,
+    );
+    return _reports.where((report) {
+      final reportDate = _parseReportDate(report);
+      if (reportDate == null) return false;
+      return !reportDate.isBefore(start) && !reportDate.isAfter(end);
+    }).toList();
+  }
+
   // Stats
   int _weeklyReportsSubmitted = 0;
   int get weeklyReportsSubmitted => _weeklyReportsSubmitted;
@@ -35,6 +75,30 @@ class ReportsViewModel extends BaseViewModel {
 
   // Time remaining to submit today's report
   String get timeRemainingToday {
+    final window = _submissionWindow;
+    if (window != null) {
+      final minutesRemaining = window['minutesRemaining'];
+      final cutoffTime = window['cutoffTime'];
+      if (minutesRemaining is num) {
+        if (minutesRemaining <= 0) {
+          return cutoffTime != null
+              ? 'Submission window closed ($cutoffTime)'
+              : 'Submission window closed';
+        }
+        final hours = minutesRemaining ~/ 60;
+        final minutes = minutesRemaining % 60;
+        final timeLeft =
+            hours > 0 ? '${hours}h ${minutes}m left' : '${minutes}m left';
+        if (cutoffTime != null) {
+          return 'Submit by $cutoffTime • $timeLeft';
+        }
+        return timeLeft;
+      }
+      if (cutoffTime is String && cutoffTime.isNotEmpty) {
+        return 'Submit by $cutoffTime';
+      }
+    }
+
     final now = DateTime.now();
     final endOfDay = DateTime(now.year, now.month, now.day, 23, 59);
     final diff = endOfDay.difference(now);
@@ -46,6 +110,10 @@ class ReportsViewModel extends BaseViewModel {
 
   // Is it too late to submit today?
   bool get isLateSubmission {
+    final windowLate = _submissionWindow?['isLate'];
+    if (windowLate is bool) {
+      return windowLate;
+    }
     final now = DateTime.now();
     return now.hour >= 18; // After 6 PM is considered late
   }
@@ -74,7 +142,7 @@ class ReportsViewModel extends BaseViewModel {
 
       _isInitialized = true;
     } catch (e) {
-      print('Error initializing reports: $e');
+      AppLogger.log('Error initializing reports: $e');
     } finally {
       setBusy(false);
     }
@@ -109,7 +177,7 @@ class ReportsViewModel extends BaseViewModel {
         notifyListeners();
       }
     } catch (e) {
-      print('Error loading cached reports: $e');
+      AppLogger.log('Error loading cached reports: $e');
     }
   }
 
@@ -130,7 +198,7 @@ class ReportsViewModel extends BaseViewModel {
         _loadStats(),
       ]);
     } catch (e) {
-      print('Error in silent refresh: $e');
+      AppLogger.log('Error in silent refresh: $e');
     }
   }
 
@@ -149,7 +217,7 @@ class ReportsViewModel extends BaseViewModel {
       ]);
       notifyListeners();
     } catch (e) {
-      print('Error refreshing reports: $e');
+      AppLogger.log('Error refreshing reports: $e');
     }
   }
 
@@ -157,6 +225,12 @@ class ReportsViewModel extends BaseViewModel {
     try {
       final response = await _api.getTodayReport();
       _hasSubmittedToday = response['hasSubmittedToday'] == true;
+      if (response['submissionWindow'] is Map) {
+        _submissionWindow =
+            Map<String, dynamic>.from(response['submissionWindow']);
+      } else {
+        _submissionWindow = null;
+      }
       if (_hasSubmittedToday && response['report'] != null) {
         _todayReport = Map<String, dynamic>.from(response['report']);
       } else {
@@ -164,7 +238,7 @@ class ReportsViewModel extends BaseViewModel {
       }
       notifyListeners();
     } catch (e) {
-      print('Error loading today status: $e');
+      AppLogger.log('Error loading today status: $e');
     }
   }
 
@@ -178,7 +252,7 @@ class ReportsViewModel extends BaseViewModel {
 
       notifyListeners();
     } catch (e) {
-      print('Error loading reports: $e');
+      AppLogger.log('Error loading reports: $e');
       // Keep existing cached data if API fails
     }
   }
@@ -195,7 +269,7 @@ class ReportsViewModel extends BaseViewModel {
           (stats['quarterlyAverageScore'] as num?)?.toDouble() ?? 0;
       notifyListeners();
     } catch (e) {
-      print('Error loading stats: $e');
+      AppLogger.log('Error loading stats: $e');
     }
   }
 
@@ -244,5 +318,37 @@ class ReportsViewModel extends BaseViewModel {
     } else {
       throw Exception(response['error'] ?? 'Failed to update report');
     }
+  }
+
+  void setHistoryDateRange(DateTime? start, DateTime? end) {
+    _historyStartDate = start;
+    _historyEndDate = end;
+    notifyListeners();
+  }
+
+  void clearHistoryDateRange() {
+    _historyStartDate = null;
+    _historyEndDate = null;
+    notifyListeners();
+  }
+
+  DateTime? _parseReportDate(Map<String, dynamic> report) {
+    final rawDate = report['reportDate'] ??
+        report['report_date'] ??
+        report['createdAt'] ??
+        report['created_at'];
+    if (rawDate == null) return null;
+    try {
+      final parsed = DateTime.parse(rawDate.toString());
+      return DateTime(parsed.year, parsed.month, parsed.day);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    return '$day/$month/${date.year}';
   }
 }

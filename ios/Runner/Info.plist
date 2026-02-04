@@ -2,10 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Schoolable</string>
+	<string>WorkSight</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +15,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>schoolable</string>
+	<string>WorkSight</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -23,6 +25,22 @@
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>WorkSight needs access to your camera to take a selfie for daily check-in verification.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>WorkSight uses your location to verify attendance check-in and ensure you are at the designated work location.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>WorkSight needs your location to verify your check-in location for attendance tracking.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>WorkSight needs access to your microphone for voice input and communication features.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>WorkSight needs permission to save check-in photos to your library.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>WorkSight needs access to your photo library to save check-in photos.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>WorkSight uses speech recognition to help you with voice input.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -41,29 +59,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
-	
-	<!-- Camera and Photo Library Permissions -->
-	<key>NSCameraUsageDescription</key>
-	<string>Schoolable needs access to your camera to take a selfie for daily check-in verification.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Schoolable needs access to your photo library to save check-in photos.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Schoolable needs permission to save check-in photos to your library.</string>
-	
-	<!-- Location Permissions -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Schoolable needs your location to verify your check-in location for attendance tracking.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Schoolable uses your location to verify attendance check-in and ensure you are at the designated work location.</string>
-	
-	<!-- Microphone Permission (for speech-to-text if used) -->
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Schoolable needs access to your microphone for voice input and communication features.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Schoolable uses speech recognition to help you with voice input.</string>
 </dict>
 </plist>

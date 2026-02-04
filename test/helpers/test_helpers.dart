@@ -1,10 +1,15 @@
 import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:schoolable/app/app.locator.dart';
+import 'package:schoolable/services/backend_api_service.dart';
+import 'package:schoolable/services/cache_service.dart';
+import 'package:schoolable/services/websocket_service.dart';
 import 'package:stacked_services/stacked_services.dart';
 // @stacked-import
 
 import 'test_helpers.mocks.dart';
+
+export 'test_helpers.mocks.dart';
 
 @GenerateMocks(
   [],
@@ -12,6 +17,9 @@ import 'test_helpers.mocks.dart';
     MockSpec<NavigationService>(onMissingStub: OnMissingStub.returnDefault),
     MockSpec<BottomSheetService>(onMissingStub: OnMissingStub.returnDefault),
     MockSpec<DialogService>(onMissingStub: OnMissingStub.returnDefault),
+    MockSpec<BackendApiService>(onMissingStub: OnMissingStub.returnDefault),
+    MockSpec<CacheService>(onMissingStub: OnMissingStub.returnDefault),
+    MockSpec<WebSocketService>(onMissingStub: OnMissingStub.returnDefault),
     // @stacked-mock-spec
   ],
 )
@@ -19,6 +27,9 @@ void registerServices() {
   getAndRegisterNavigationService();
   getAndRegisterBottomSheetService();
   getAndRegisterDialogService();
+  getAndRegisterBackendApiService();
+  getAndRegisterCacheService();
+  getAndRegisterWebSocketService();
   // @stacked-mock-register
 }
 
@@ -73,6 +84,27 @@ MockDialogService getAndRegisterDialogService() {
   _removeRegistrationIfExists<DialogService>();
   final service = MockDialogService();
   locator.registerSingleton<DialogService>(service);
+  return service;
+}
+
+MockBackendApiService getAndRegisterBackendApiService() {
+  _removeRegistrationIfExists<BackendApiService>();
+  final service = MockBackendApiService();
+  locator.registerSingleton<BackendApiService>(service);
+  return service;
+}
+
+MockCacheService getAndRegisterCacheService() {
+  _removeRegistrationIfExists<CacheService>();
+  final service = MockCacheService();
+  locator.registerSingleton<CacheService>(service);
+  return service;
+}
+
+MockWebSocketService getAndRegisterWebSocketService() {
+  _removeRegistrationIfExists<WebSocketService>();
+  final service = MockWebSocketService();
+  locator.registerSingleton<WebSocketService>(service);
   return service;
 }
 

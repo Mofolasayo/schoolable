@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
+import 'package:schoolable/services/websocket_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/home/home_viewmodel.dart';
 import 'package:schoolable/ui/views/compliance/compliance_submission_view.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 class ComplianceView extends StackedView<ComplianceViewModel> {
   const ComplianceView({Key? key}) : super(key: key);
@@ -15,7 +18,7 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
 
   @override
   void onViewModelReady(ComplianceViewModel viewModel) {
-    viewModel.fetchComplianceItems();
+    viewModel.initialize();
   }
 
   @override
@@ -156,11 +159,16 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
   Widget _buildComplianceList(
       BuildContext context, ComplianceViewModel viewModel) {
     final pending = viewModel.complianceItems
-        .where((item) => item.status != 'complied')
+        .where((item) => item.status == 'pending' || item.status == 'rejected')
+        .toList();
+    final inReview = viewModel.complianceItems
+        .where((item) => item.status == 'submitted')
         .toList();
     final completed = viewModel.complianceItems
-        .where((item) => item.status == 'complied')
+        .where((item) => item.status == 'approved')
         .toList();
+    final total = viewModel.complianceItems.length;
+    final resolved = total - pending.length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
@@ -197,7 +205,7 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '${completed.length}/${viewModel.complianceItems.length}',
+                        '$resolved/$total',
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 32,
@@ -206,9 +214,9 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        pending.isEmpty
+                        pending.isEmpty && inReview.isEmpty
                             ? 'All requirements complete ✓'
-                            : '${pending.length} pending ${pending.length == 1 ? "item" : "items"}',
+                            : '${pending.length} pending • ${inReview.length} in review',
                         style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 13,
@@ -264,6 +272,36 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
             ...pending.map((item) => _buildComplianceCard(context, item, true)),
           ],
 
+          // In Review Section
+          if (inReview.isNotEmpty) ...[
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: kcPrimaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(Icons.hourglass_top_rounded,
+                      color: kcPrimaryColor, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'In Review',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: kcTextColor,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...inReview
+                .map((item) => _buildComplianceCard(context, item, false)),
+          ],
+
           // Completed Items Section
           if (completed.isNotEmpty) ...[
             const SizedBox(height: 28),
@@ -300,13 +338,17 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
 
   Widget _buildComplianceCard(
       BuildContext context, ComplianceItem item, bool isPending) {
+    final isInReview = item.status == 'submitted';
+    final isApproved = item.status == 'approved';
+    final isRejected = item.status == 'rejected';
+    final isActionable = isPending || isRejected;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isPending
+          color: isActionable
               ? kcAmberColor.withOpacity(0.3)
               : kcBorderColor.withOpacity(0.5),
         ),
@@ -321,7 +363,7 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: isPending
+          onTap: isActionable
               ? () async {
                   final result = await Navigator.push(
                     context,
@@ -330,33 +372,39 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
                     ),
                   );
                   if (result == true && context.mounted) {
-                    // Refresh the list
+                    await viewModel.fetchComplianceItems();
                   }
                 }
               : null,
           borderRadius: BorderRadius.circular(14),
           child: Padding(
             padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Icon
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: isPending
-                        ? kcAmberColor.withOpacity(0.1)
+        child: Row(
+          children: [
+            // Icon
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isActionable
+                    ? kcAmberColor.withOpacity(0.1)
+                    : isInReview
+                        ? kcPrimaryColor.withOpacity(0.1)
                         : kcTealColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    item.type == 'upload'
-                        ? Icons.upload_file_rounded
-                        : Icons.policy_rounded,
-                    color: isPending ? kcAmberColor : kcTealColor,
-                    size: 22,
-                  ),
-                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                item.type == 'upload'
+                    ? Icons.upload_file_rounded
+                    : Icons.policy_rounded,
+                color: isActionable
+                    ? kcAmberColor
+                    : isInReview
+                        ? kcPrimaryColor
+                        : kcTealColor,
+                size: 22,
+              ),
+            ),
                 const SizedBox(width: 14),
                 // Content
                 Expanded(
@@ -375,12 +423,20 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        isPending
-                            ? 'Due: ${_formatDate(item.deadline)}'
-                            : 'Completed',
+                        isApproved
+                            ? 'Approved'
+                            : isInReview
+                                ? 'Submitted • awaiting review'
+                                : isRejected
+                                    ? 'Rejected • resubmit required'
+                                    : 'Due: ${_formatDate(item.deadline)}',
                         style: TextStyle(
                           fontSize: 12,
-                          color: isPending ? kcAmberColor : kcTealColor,
+                          color: isActionable
+                              ? kcAmberColor
+                              : isInReview
+                                  ? kcPrimaryColor
+                                  : kcTealColor,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -388,9 +444,12 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
                   ),
                 ),
                 // Arrow or checkmark
-                isPending
+                isActionable
                     ? const Icon(Icons.chevron_right,
                         color: kcTextMutedColor, size: 22)
+                    : isInReview
+                        ? const Icon(Icons.hourglass_top_rounded,
+                            color: kcPrimaryColor, size: 22)
                     : const Icon(Icons.check_circle,
                         color: kcTealColor, size: 22),
               ],
@@ -402,30 +461,24 @@ class ComplianceView extends StackedView<ComplianceViewModel> {
   }
 
   String _formatDate(DateTime date) {
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    return DateFormat('MMM d, y').format(date);
   }
 }
 
 /// ViewModel for Compliance View
 class ComplianceViewModel extends BaseViewModel {
   final _backendService = locator<BackendApiService>();
+  final _wsService = locator<WebSocketService>();
 
   List<ComplianceItem> _complianceItems = [];
   List<ComplianceItem> get complianceItems => _complianceItems;
+
+  MessageCallback? _notificationHandler;
+
+  Future<void> initialize() async {
+    await fetchComplianceItems();
+    await _subscribeToRealtimeUpdates();
+  }
 
   Future<void> fetchComplianceItems() async {
     setBusy(true);
@@ -448,17 +501,53 @@ class ComplianceViewModel extends BaseViewModel {
           description: item['description']?.toString() ?? '',
           type: item['type']?.toString() ?? 'policy', // 'policy' or 'upload'
           status: item['status']?.toString() ??
-              'pending', // 'pending', 'submitted', 'complied', 'rejected'
+              'pending', // 'pending', 'submitted', 'approved', 'rejected'
           deadline: deadline,
+          policyFileUrl: item['fileUrl']?.toString() ??
+              item['policyFileUrl']?.toString(),
+          policyFileName: item['fileName']?.toString() ??
+              item['policyFileName']?.toString(),
         );
       }).toList();
 
       notifyListeners();
     } catch (e) {
-      print('Error fetching compliance items: $e');
+      AppLogger.log('Error fetching compliance items: $e');
       setError('Failed to load compliance items');
     } finally {
       setBusy(false);
     }
+  }
+
+  Future<void> _subscribeToRealtimeUpdates() async {
+    if (_notificationHandler != null) {
+      return;
+    }
+
+    if (!_wsService.isConnected) {
+      final token = await _backendService.getCurrentToken();
+      if (token != null) {
+        await _wsService.connect(token);
+      }
+    }
+
+    _notificationHandler = (message) {
+      final notificationType =
+          message.data['notificationType']?.toString() ?? '';
+      if (notificationType.contains('compliance')) {
+        fetchComplianceItems();
+      }
+    };
+
+    _wsService.subscribeToNotifications(onNotification: _notificationHandler!);
+  }
+
+  @override
+  void dispose() {
+    if (_notificationHandler != null) {
+      _wsService.unsubscribeFromNotifications(_notificationHandler!);
+      _notificationHandler = null;
+    }
+    super.dispose();
   }
 }

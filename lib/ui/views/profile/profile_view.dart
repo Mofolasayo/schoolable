@@ -13,11 +13,15 @@ class ProfileView extends StackedView<ProfileViewModel> {
   Widget builder(
       BuildContext context, ProfileViewModel viewModel, Widget? child) {
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: RefreshIndicator(
+        onRefresh: viewModel.refresh,
+        color: kcPrimaryColor,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -261,6 +265,13 @@ class ProfileView extends StackedView<ProfileViewModel> {
                           ),
                     onTap: () => viewModel.navigateToGrowth(),
                   ),
+                  const Divider(height: 1, color: kcBorderColor),
+                  _ProfileMenuItem(
+                    icon: Icons.event_available,
+                    title: 'Apply for leave',
+                   
+                    onTap: () => viewModel.navigateToLeave(),
+                  ),
                 ],
               ),
             ),
@@ -319,7 +330,8 @@ class ProfileView extends StackedView<ProfileViewModel> {
               ),
             ),
             const SizedBox(height: 20),
-          ],
+            ],
+          ),
         ),
       ),
     );

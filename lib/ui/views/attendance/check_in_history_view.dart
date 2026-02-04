@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
@@ -235,7 +236,7 @@ class CheckInHistoryView extends StackedView<CheckInHistoryViewModel> {
     final date = _parseDate(record['date'] ?? record['check_in']);
     final checkIn = _formatTime(record['check_in']);
     final checkOut = _formatTime(record['check_out']);
-    final status = record['status']?.toString().toLowerCase() ?? 'present';
+    final status = _normalizeStatus(record['status']?.toString());
     final location = record['location'] ?? record['address'] ?? 'Unknown';
     final photoUrl = record['photo_url'];
     final isLate = status == 'late';
@@ -410,25 +411,10 @@ class CheckInHistoryView extends StackedView<CheckInHistoryViewModel> {
     if (dateStr == null) return {'day': '--', 'weekday': '', 'fullDate': ''};
     try {
       final date = DateTime.parse(dateStr);
-      final weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      final months = [
-        'Jan',
-        'Feb',
-        'Mar',
-        'Apr',
-        'May',
-        'Jun',
-        'Jul',
-        'Aug',
-        'Sep',
-        'Oct',
-        'Nov',
-        'Dec'
-      ];
       return {
         'day': date.day.toString(),
-        'weekday': weekdays[date.weekday - 1],
-        'fullDate': '${months[date.month - 1]} ${date.day}, ${date.year}',
+        'weekday': DateFormat('EEE').format(date),
+        'fullDate': DateFormat('MMM d, y').format(date),
       };
     } catch (_) {
       return {'day': '--', 'weekday': '', 'fullDate': ''};
@@ -462,21 +448,7 @@ class CheckInHistoryViewModel extends BaseViewModel {
     for (final record in _history) {
       try {
         final date = DateTime.parse(record['check_in'] ?? record['date'] ?? '');
-        final monthNames = [
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec'
-        ];
-        months.add('${monthNames[date.month - 1]} ${date.year}');
+        months.add(DateFormat('MMM y').format(date));
       } catch (_) {}
     }
     return months.toList();
@@ -487,25 +459,16 @@ class CheckInHistoryViewModel extends BaseViewModel {
     return _history.where((record) {
       try {
         final date = DateTime.parse(record['check_in'] ?? record['date'] ?? '');
-        final monthNames = [
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec'
-        ];
-        return '${monthNames[date.month - 1]} ${date.year}' == _selectedMonth;
+        return DateFormat('MMM y').format(date) == _selectedMonth;
       } catch (_) {
         return false;
       }
     }).toList();
+  }
+
+  String _normalizeStatus(String? status) {
+    final normalized = (status ?? 'present').toLowerCase();
+    return normalized == 'excused' ? 'late' : normalized;
   }
 
   int get thisMonthCount {
@@ -522,14 +485,14 @@ class CheckInHistoryViewModel extends BaseViewModel {
 
   int get lateCount {
     return _history
-        .where((r) => (r['status']?.toString().toLowerCase() ?? '') == 'late')
+        .where((r) => _normalizeStatus(r['status']?.toString()) == 'late')
         .length;
   }
 
   int get onTimePercentage {
     if (_history.isEmpty) return 0;
     final onTime = _history.where((r) {
-      final status = r['status']?.toString().toLowerCase() ?? '';
+      final status = _normalizeStatus(r['status']?.toString());
       return status == 'present' || status == 'early';
     }).length;
     return ((onTime / _history.length) * 100).round();

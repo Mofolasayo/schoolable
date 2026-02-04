@@ -4,8 +4,9 @@ import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'attendance_viewmodel.dart';
-import 'package:schoolable/ui/views/attendance/attendance_view.dart'
-    show StringExtension;
+import 'package:schoolable/ui/views/attendance/attendance_view.dart';
+import 'package:schoolable/services/logging_service.dart';
+   
 
 class AttendanceHistoryViewModel extends BaseViewModel {
   final _backendService = locator<BackendApiService>();
@@ -19,7 +20,7 @@ class AttendanceHistoryViewModel extends BaseViewModel {
       final data = await _backendService.getAttendanceHistory();
       _history = data.map((e) => AttendanceRecord.fromMap(e)).toList();
     } catch (e) {
-      print('Error fetching history: $e');
+      AppLogger.log('Error fetching history: $e');
     } finally {
       setBusy(false);
     }

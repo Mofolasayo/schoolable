@@ -3,12 +3,60 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:schoolable/services/cache_service.dart';
+import 'package:schoolable/services/database_service.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 /// Minimal backend client to replace Supabase auth/profile flows.
 class BackendApiService {
-  final _storage = const FlutterSecureStorage();
+  BackendApiService({
+    FlutterSecureStorage? storage,
+    http.Client? client,
+    CacheService? cacheService,
+    DatabaseService? databaseService,
+  })  : _storage = storage ?? const FlutterSecureStorage(),
+        _client = client ?? http.Client(),
+        _cacheService = cacheService ?? CacheService(),
+        _databaseService = databaseService ?? DatabaseService();
+
+  final FlutterSecureStorage _storage;
+  final http.Client _client;
+  final CacheService _cacheService;
+  final DatabaseService _databaseService;
   Map<String, dynamic>? _cachedProfile;
   String? _inMemoryToken;
+
+  void _log(String message) {
+    AppLogger.log(message);
+  }
+
+  bool _isTokenExpired(String token) {
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return true;
+      final payload = jsonDecode(
+        utf8.decode(base64Url.decode(base64Url.normalize(parts[1]))),
+      );
+      if (payload is! Map<String, dynamic>) return true;
+      final exp = payload['exp'];
+      if (exp is int) {
+        final expiry =
+            DateTime.fromMillisecondsSinceEpoch(exp * 1000, isUtc: true);
+        return DateTime.now().toUtc().isAfter(expiry);
+      }
+      if (exp is String) {
+        final parsed = int.tryParse(exp);
+        if (parsed == null) return true;
+        final expiry =
+            DateTime.fromMillisecondsSinceEpoch(parsed * 1000, isUtc: true);
+        return DateTime.now().toUtc().isAfter(expiry);
+      }
+    } catch (_) {
+      return true;
+    }
+    return false;
+  }
 
   String get _baseUrl {
     final url = dotenv.env['BACKEND_URL'];
@@ -18,44 +66,65 @@ class BackendApiService {
     return url;
   }
 
+  String _guessImageMimeType(String filePath) {
+    final lower = filePath.toLowerCase();
+    if (lower.endsWith('.png')) return 'image/png';
+    if (lower.endsWith('.webp')) return 'image/webp';
+    if (lower.endsWith('.heic')) return 'image/heic';
+    if (lower.endsWith('.heif')) return 'image/heif';
+    return 'image/jpeg';
+  }
+
   Future<String?> _getToken() async {
     // First check in-memory token
     if (_inMemoryToken != null && _inMemoryToken!.isNotEmpty) {
-      print('🔑 Using in-memory token');
+      if (_isTokenExpired(_inMemoryToken!)) {
+        _log('In-memory token expired, clearing session');
+        await clearSession();
+        return null;
+      }
+      _log('Using in-memory token');
       return _inMemoryToken;
     }
     // Fallback to secure storage
     final storedToken = await _storage.read(key: 'jwt_token');
     if (storedToken != null && storedToken.isNotEmpty) {
-      print('🔑 Using stored token from secure storage');
+      if (_isTokenExpired(storedToken)) {
+        _log('Stored token expired, clearing session');
+        await clearSession();
+        return null;
+      }
+      _log('Using stored token from secure storage');
       // Cache it in memory for future use
       _inMemoryToken = storedToken;
       return storedToken;
     }
-    print('⚠️ No token found');
+    _log('No token found');
     return null;
   }
 
   Future<void> _saveToken(String token) async {
-    print('💾 Saving token (length: ${token.length})');
+    _log('Saving token (length: ${token.length})');
     _inMemoryToken = token;
     await _storage.write(key: 'jwt_token', value: token);
 
     // Verify the token was saved correctly
     final verifyToken = await _storage.read(key: 'jwt_token');
     if (verifyToken == null || verifyToken.isEmpty) {
-      print('❌ CRITICAL: Token save verification failed!');
+      _log('CRITICAL: Token save verification failed');
       throw Exception('Failed to save authentication token');
     }
 
-    print('✅ Token saved and verified (length: ${verifyToken.length})');
+    _log('Token saved and verified (length: ${verifyToken.length})');
   }
 
   Future<void> clearSession() async {
-    print('🗑️ Clearing session');
+    _log('Clearing session');
     _cachedProfile = null;
     _inMemoryToken = null;
     await _storage.delete(key: 'jwt_token');
+    await _cacheService.clearAll(clearUserScope: true);
+    await _databaseService.clearAllCache();
   }
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body,
@@ -64,7 +133,7 @@ class BackendApiService {
     if (auth) {
       token = await _getToken();
       if (token == null || token.isEmpty) {
-        print('❌ Auth required but no token available for $path');
+        _log('❌ Auth required but no token available for $path');
         throw Exception('Not authenticated');
       }
     }
@@ -75,17 +144,17 @@ class BackendApiService {
         'Authorization': 'Bearer $token',
     };
 
-    print('📤 POST $path (auth: $auth, hasToken: ${token != null})');
+    _log('📤 POST $path (auth: $auth, hasToken: ${token != null})');
 
-    final resp = await http.post(
+    final resp = await _client.post(
       Uri.parse('$_baseUrl$path'),
       headers: headers,
       body: jsonEncode(body),
     );
 
-    print('📥 Response: ${resp.statusCode}');
+    _log('📥 Response: ${resp.statusCode}');
     if (resp.statusCode >= 400) {
-      print('📥 Response body: ${resp.body}');
+      _log('📥 Response body: ${resp.body}');
     }
 
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
@@ -100,7 +169,7 @@ class BackendApiService {
     if (auth) {
       token = await _getToken();
       if (token == null || token.isEmpty) {
-        print('❌ Auth required but no token available for $path');
+        _log('❌ Auth required but no token available for $path');
         throw Exception('Not authenticated');
       }
     }
@@ -111,17 +180,17 @@ class BackendApiService {
         'Authorization': 'Bearer $token',
     };
 
-    print('📤 PATCH $path (auth: $auth, hasToken: ${token != null})');
+    _log('📤 PATCH $path (auth: $auth, hasToken: ${token != null})');
 
-    final resp = await http.patch(
+    final resp = await _client.patch(
       Uri.parse('$_baseUrl$path'),
       headers: headers,
       body: jsonEncode(body),
     );
 
-    print('📥 Response: ${resp.statusCode}');
+    _log('📥 Response: ${resp.statusCode}');
     if (resp.statusCode >= 400) {
-      print('📥 Response body: ${resp.body}');
+      _log('📥 Response body: ${resp.body}');
     }
 
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
@@ -136,7 +205,7 @@ class BackendApiService {
     if (auth) {
       token = await _getToken();
       if (token == null || token.isEmpty) {
-        print('❌ Auth required but no token available for $path');
+        _log('❌ Auth required but no token available for $path');
         throw Exception('Not authenticated');
       }
     }
@@ -147,17 +216,17 @@ class BackendApiService {
         'Authorization': 'Bearer $token',
     };
 
-    print('📤 PUT $path (auth: $auth, hasToken: ${token != null})');
+    _log('📤 PUT $path (auth: $auth, hasToken: ${token != null})');
 
-    final resp = await http.put(
+    final resp = await _client.put(
       Uri.parse('$_baseUrl$path'),
       headers: headers,
       body: jsonEncode(body),
     );
 
-    print('📥 Response: ${resp.statusCode}');
+    _log('📥 Response: ${resp.statusCode}');
     if (resp.statusCode >= 400) {
-      print('📥 Response body: ${resp.body}');
+      _log('📥 Response body: ${resp.body}');
     }
 
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
@@ -171,7 +240,7 @@ class BackendApiService {
     if (auth) {
       token = await _getToken();
       if (token == null || token.isEmpty) {
-        print('❌ Auth required but no token available for $path');
+        _log('❌ Auth required but no token available for $path');
         throw Exception('Not authenticated');
       }
     }
@@ -181,14 +250,14 @@ class BackendApiService {
         'Authorization': 'Bearer $token',
     };
 
-    print('📤 DELETE $path (auth: $auth, hasToken: ${token != null})');
+    _log('📤 DELETE $path (auth: $auth, hasToken: ${token != null})');
 
     final resp =
-        await http.delete(Uri.parse('$_baseUrl$path'), headers: headers);
+        await _client.delete(Uri.parse('$_baseUrl$path'), headers: headers);
 
-    print('📥 Response: ${resp.statusCode}');
+    _log('📥 Response: ${resp.statusCode}');
     if (resp.statusCode >= 400) {
-      print('📥 Response body: ${resp.body}');
+      _log('📥 Response body: ${resp.body}');
     }
 
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
@@ -202,7 +271,7 @@ class BackendApiService {
     if (auth) {
       token = await _getToken();
       if (token == null || token.isEmpty) {
-        print('❌ Auth required but no token available for $path');
+        _log('❌ Auth required but no token available for $path');
         throw Exception('Not authenticated');
       }
     }
@@ -212,11 +281,11 @@ class BackendApiService {
         'Authorization': 'Bearer $token',
     };
 
-    print('📤 GET $path (auth: $auth, hasToken: ${token != null})');
+    _log('📤 GET $path (auth: $auth, hasToken: ${token != null})');
 
-    final resp = await http.get(Uri.parse('$_baseUrl$path'), headers: headers);
+    final resp = await _client.get(Uri.parse('$_baseUrl$path'), headers: headers);
 
-    print('📥 Response: ${resp.statusCode}');
+    _log('📥 Response: ${resp.statusCode}');
 
     if (resp.statusCode >= 200 && resp.statusCode < 300) {
       return resp.body.isNotEmpty ? jsonDecode(resp.body) : {};
@@ -267,7 +336,12 @@ class BackendApiService {
     final uri = Uri.parse('$_baseUrl/storage/attendance/photo');
     final request = http.MultipartRequest('POST', uri);
     request.headers['Authorization'] = 'Bearer $token';
-    request.files.add(await http.MultipartFile.fromPath('file', filePath));
+    final mimeType = _guessImageMimeType(filePath);
+    request.files.add(await http.MultipartFile.fromPath(
+      'file',
+      filePath,
+      contentType: MediaType.parse(mimeType),
+    ));
 
     final streamedResponse = await request.send();
     final resp = await http.Response.fromStream(streamedResponse);
@@ -331,7 +405,7 @@ class BackendApiService {
     String? city,
     String? state,
   }) async {
-    print('📋 Updating profile details');
+    _log('📋 Updating profile details');
     return _post(
       '/profile/update',
       {
@@ -357,7 +431,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching training records: $e');
+      _log('Error fetching training records: $e');
       return [];
     }
   }
@@ -472,7 +546,7 @@ class BackendApiService {
     required String password,
     required String fullName,
   }) async {
-    print('📝 Signing up: $email');
+    _log('📝 Signing up: $email');
     final res = await _post('/auth/signup', {
       'email': email,
       'password': password,
@@ -482,12 +556,12 @@ class BackendApiService {
   }
 
   Future<Map<String, dynamic>> verifyEmail(String token) async {
-    print('✉️ Verifying email with token');
+    _log('✉️ Verifying email with token');
     return _post('/auth/verify-email', {'token': token});
   }
 
   Future<Map<String, dynamic>> resendVerification(String email) async {
-    print('🔄 Resending verification to: $email');
+    _log('🔄 Resending verification to: $email');
     return _post('/auth/resend-verification', {'email': email});
   }
 
@@ -495,7 +569,7 @@ class BackendApiService {
     required String email,
     required String password,
   }) async {
-    print('🔐 Signing in: $email');
+    _log('🔐 Signing in: $email');
     final res = await _post('/auth/login', {
       'email': email,
       'password': password,
@@ -505,18 +579,22 @@ class BackendApiService {
     final profile = res['profile'] as Map<String, dynamic>?;
 
     if (token == null || profile == null) {
-      print(
+      _log(
           '❌ Invalid login response: token=${token != null}, profile=${profile != null}');
       throw Exception('Invalid login response');
     }
 
-    print('✅ Login successful, saving token');
+    _log('✅ Login successful, saving token');
     await _saveToken(token);
     _cachedProfile = profile;
+    final userId = profile['id']?.toString();
+    if (userId != null) {
+      await _cacheService.setActiveUser(userId);
+    }
 
     // Verify token was saved
     final savedToken = await _getToken();
-    print(
+    _log(
         '🔍 Token verification after save: ${savedToken != null ? 'OK' : 'FAILED'}');
 
     return res;
@@ -525,16 +603,81 @@ class BackendApiService {
   Future<Map<String, dynamic>?> getUserProfile(
       {bool forceRefresh = false}) async {
     if (_cachedProfile != null && !forceRefresh) {
-      print('📋 Returning cached profile');
+      _log('📋 Returning cached profile');
       return _cachedProfile;
     }
-    print('📋 Fetching profile from server');
+    _log('📋 Fetching profile from server');
     final res = await _get('/profile/me');
     if (res is Map) {
       _cachedProfile = Map<String, dynamic>.from(res);
+      final userId = _cachedProfile?['id']?.toString();
+      if (userId != null) {
+        await _cacheService.setActiveUser(userId);
+      }
       return _cachedProfile;
     }
     return null;
+  }
+
+  /// Get distinct departments for profile completion and filtering
+  Future<List<String>> getDepartments() async {
+    try {
+      final result = await _get('/profile/departments');
+      if (result is Map && result['departments'] is List) {
+        return (result['departments'] as List)
+            .whereType<String>()
+            .where((d) => d.trim().isNotEmpty)
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      _log('Error fetching departments: $e');
+      return [];
+    }
+  }
+
+  /// Get job level reference data for profile completion
+  Future<List<Map<String, dynamic>>> getJobLevels() async {
+    try {
+      final result = await _get('/profile/job-levels');
+      if (result is Map && result['jobLevels'] is List) {
+        return (result['jobLevels'] as List)
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      }
+      return [];
+    } catch (e) {
+      _log('Error fetching job levels: $e');
+      return [];
+    }
+  }
+
+  /// Get team members in the same department
+  Future<List<Map<String, dynamic>>> getTeamMembers() async {
+    try {
+      final result = await _get('/profile/team');
+      if (result is List) {
+        return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      return [];
+    } catch (e) {
+      _log('Error fetching team members: $e');
+      return [];
+    }
+  }
+
+  /// Get reference data for UI dropdowns and filters
+  Future<Map<String, dynamic>> getReferenceData() async {
+    try {
+      final result = await _get('/api/reference-data');
+      if (result is Map) {
+        return Map<String, dynamic>.from(result);
+      }
+      return {};
+    } catch (e) {
+      _log('Error fetching reference data: $e');
+      return {};
+    }
   }
 
   /// Check if the current user's profile is complete (calls /profile/is-complete)
@@ -547,7 +690,7 @@ class BackendApiService {
       }
       return {'is_complete': false};
     } catch (e) {
-      print('Error checking profile completion: $e');
+      _log('Error checking profile completion: $e');
       return {'is_complete': false, 'error': e.toString()};
     }
   }
@@ -566,12 +709,12 @@ class BackendApiService {
     bool isTeamLead = false,
     int? employeeLevel,
   }) async {
-    print('📋 Completing profile');
+    _log('📋 Completing profile');
 
     // Verify we have a token before making the request
     final token = await _getToken();
     if (token == null || token.isEmpty) {
-      print('❌ Cannot complete profile: No authentication token');
+      _log('❌ Cannot complete profile: No authentication token');
       throw Exception('Not authenticated. Please log in again.');
     }
 
@@ -595,7 +738,7 @@ class BackendApiService {
         },
         auth: true);
 
-    print('✅ Profile completed successfully');
+    _log('✅ Profile completed successfully');
   }
 
   Future<bool> hasSession() async {
@@ -623,14 +766,14 @@ class BackendApiService {
 
   /// Debug: Print current auth state
   Future<void> debugAuthState() async {
-    print('=== Auth State Debug ===');
-    print(
+    _log('=== Auth State Debug ===');
+    _log(
         'In-memory token: ${_inMemoryToken != null ? 'Present (${_inMemoryToken!.length} chars)' : 'None'}');
     final storedToken = await _storage.read(key: 'jwt_token');
-    print(
+    _log(
         'Stored token: ${storedToken != null ? 'Present (${storedToken.length} chars)' : 'None'}');
-    print('Cached profile: ${_cachedProfile != null ? 'Present' : 'None'}');
-    print('========================');
+    _log('Cached profile: ${_cachedProfile != null ? 'Present' : 'None'}');
+    _log('========================');
   }
 
   // ==================== ANNOUNCEMENTS ====================
@@ -644,7 +787,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching announcements: $e');
+      _log('Error fetching announcements: $e');
       return [];
     }
   }
@@ -658,7 +801,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching unread announcements: $e');
+      _log('Error fetching unread announcements: $e');
       return [];
     }
   }
@@ -668,7 +811,7 @@ class BackendApiService {
     try {
       await _post('/announcements/$announcementId/read', {}, auth: true);
     } catch (e) {
-      print('Error marking announcement as read: $e');
+      _log('Error marking announcement as read: $e');
     }
   }
 
@@ -683,7 +826,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching channels: $e');
+      _log('Error fetching channels: $e');
       return [];
     }
   }
@@ -697,7 +840,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching public channels: $e');
+      _log('Error fetching public channels: $e');
       return [];
     }
   }
@@ -719,7 +862,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching messages: $e');
+      _log('Error fetching messages: $e');
       return [];
     }
   }
@@ -736,7 +879,7 @@ class BackendApiService {
           auth: true);
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error sending message: $e');
+      _log('Error sending message: $e');
       return null;
     }
   }
@@ -747,7 +890,7 @@ class BackendApiService {
       await _post('/messaging/channels/$channelId/read', {}, auth: true);
       return true;
     } catch (e) {
-      print('Error marking channel as read: $e');
+      _log('Error marking channel as read: $e');
       return false;
     }
   }
@@ -758,7 +901,7 @@ class BackendApiService {
       final result = await _get('/messaging/channels/$channelId/unread');
       return (result['unread_count'] as num?)?.toInt() ?? 0;
     } catch (e) {
-      print('Error getting unread count: $e');
+      _log('Error getting unread count: $e');
       return 0;
     }
   }
@@ -769,7 +912,7 @@ class BackendApiService {
       await _post('/messaging/heartbeat', {}, auth: true);
       return true;
     } catch (e) {
-      print('Error sending heartbeat: $e');
+      _log('Error sending heartbeat: $e');
       return false;
     }
   }
@@ -787,7 +930,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error getting online users: $e');
+      _log('Error getting online users: $e');
       return [];
     }
   }
@@ -806,7 +949,7 @@ class BackendApiService {
           auth: true);
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error creating channel: $e');
+      _log('Error creating channel: $e');
       return null;
     }
   }
@@ -817,7 +960,7 @@ class BackendApiService {
       await _post('/messaging/channels/$channelId/join', {}, auth: true);
       return true;
     } catch (e) {
-      print('Error joining channel: $e');
+      _log('Error joining channel: $e');
       return false;
     }
   }
@@ -828,7 +971,7 @@ class BackendApiService {
       await _post('/messaging/channels/$channelId/leave', {}, auth: true);
       return true;
     } catch (e) {
-      print('Error leaving channel: $e');
+      _log('Error leaving channel: $e');
       return false;
     }
   }
@@ -842,7 +985,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching channel members: $e');
+      _log('Error fetching channel members: $e');
       return [];
     }
   }
@@ -859,7 +1002,7 @@ class BackendApiService {
           auth: true);
       return true;
     } catch (e) {
-      print('Error adding members: $e');
+      _log('Error adding members: $e');
       return false;
     }
   }
@@ -873,7 +1016,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching staff: $e');
+      _log('Error fetching staff: $e');
       return [];
     }
   }
@@ -923,8 +1066,14 @@ class BackendApiService {
     String? address,
     String? photoUrl,
     String? deviceInfo,
+    String? deviceId,
     String? note,
     bool isRemote = false,
+    double? livenessScore,
+    String? livenessType,
+    bool? consentGiven,
+    String? consentVersion,
+    int? retentionDays,
   }) async {
     try {
       final result = await _post(
@@ -934,15 +1083,21 @@ class BackendApiService {
             'longitude': longitude,
             if (accuracy != null) 'accuracy': accuracy,
             if (address != null) 'address': address,
-            if (photoUrl != null) 'photoUrl': photoUrl,
-            if (deviceInfo != null) 'deviceInfo': deviceInfo,
+            if (photoUrl != null) 'photo_url': photoUrl,
+            if (deviceInfo != null) 'device_info': deviceInfo,
+            if (deviceId != null) 'device_id': deviceId,
             if (note != null) 'note': note,
-            'isRemote': isRemote,
+            'is_remote': isRemote,
+            if (livenessScore != null) 'liveness_score': livenessScore,
+            if (livenessType != null) 'liveness_type': livenessType,
+            if (consentGiven != null) 'consent_given': consentGiven,
+            if (consentVersion != null) 'consent_version': consentVersion,
+            if (retentionDays != null) 'retention_days': retentionDays,
           },
           auth: true);
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error checking in: $e');
+      _log('Error checking in: $e');
       return null;
     }
   }
@@ -958,7 +1113,7 @@ class BackendApiService {
           auth: true);
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error checking out: $e');
+      _log('Error checking out: $e');
       return null;
     }
   }
@@ -969,7 +1124,7 @@ class BackendApiService {
       final result = await _get('/attendance/today');
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error fetching today attendance: $e');
+      _log('Error fetching today attendance: $e');
       return null;
     }
   }
@@ -983,7 +1138,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching attendance history: $e');
+      _log('Error fetching attendance history: $e');
       return [];
     }
   }
@@ -997,8 +1152,60 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching office locations: $e');
+      _log('Error fetching office locations: $e');
       return [];
+    }
+  }
+
+  /// Get today's attendance policy (schedule, workday rules)
+  Future<Map<String, dynamic>?> getAttendancePolicyToday() async {
+    try {
+      final result = await _get('/attendance/policy/today');
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      _log('Error fetching attendance policy: $e');
+      return null;
+    }
+  }
+
+  /// Get current user's leave requests
+  Future<List<Map<String, dynamic>>> getLeaveRequests() async {
+    try {
+      final result = await _get('/attendance/time-off/requests', auth: true);
+      if (result is List) {
+        return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      }
+      return [];
+    } catch (e) {
+      _log('Error fetching leave requests: $e');
+      return [];
+    }
+  }
+
+  /// Submit a leave request
+  Future<Map<String, dynamic>?> submitLeaveRequest({
+    required DateTime startDate,
+    required DateTime endDate,
+    String? type,
+    String? notes,
+  }) async {
+    try {
+      final start = startDate.toIso8601String().split('T')[0];
+      final end = endDate.toIso8601String().split('T')[0];
+      final result = await _post(
+        '/attendance/time-off/requests',
+        {
+          'start_date': start,
+          'end_date': end,
+          if (type != null) 'type': type,
+          if (notes != null) 'notes': notes,
+        },
+        auth: true,
+      );
+      return Map<String, dynamic>.from(result);
+    } catch (e) {
+      _log('Error submitting leave request: $e');
+      return null;
     }
   }
 
@@ -1010,7 +1217,7 @@ class BackendApiService {
       final result = await _get('/attendance/reference-face', auth: true);
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error fetching reference face: $e');
+      _log('Error fetching reference face: $e');
       return null;
     }
   }
@@ -1027,7 +1234,7 @@ class BackendApiService {
       );
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error registering reference face: $e');
+      _log('Error registering reference face: $e');
       return null;
     }
   }
@@ -1044,7 +1251,7 @@ class BackendApiService {
       );
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error comparing faces: $e');
+      _log('Error comparing faces: $e');
       return null;
     }
   }
@@ -1057,7 +1264,7 @@ class BackendApiService {
       final result = await _get('/surveys/pulse/current', auth: true);
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error fetching pulse survey: $e');
+      _log('Error fetching pulse survey: $e');
       return null;
     }
   }
@@ -1079,7 +1286,7 @@ class BackendApiService {
       );
       return true;
     } catch (e) {
-      print('Error submitting pulse survey: $e');
+      _log('Error submitting pulse survey: $e');
       return false;
     }
   }
@@ -1092,7 +1299,7 @@ class BackendApiService {
       final result = await _get('/tasks/rating/pending');
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error fetching tasks pending rating: $e');
+      _log('Error fetching tasks pending rating: $e');
       return {'pendingRatings': [], 'count': 0};
     }
   }
@@ -1114,7 +1321,7 @@ class BackendApiService {
       );
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error rating task: $e');
+      _log('Error rating task: $e');
       return null;
     }
   }
@@ -1125,7 +1332,7 @@ class BackendApiService {
       final result = await _get('/tasks/rating/average/$employeeId');
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error fetching average rating: $e');
+      _log('Error fetching average rating: $e');
       return {'averageRating': null, 'hasRatings': false};
     }
   }
@@ -1136,12 +1343,28 @@ class BackendApiService {
   Future<List<Map<String, dynamic>>> getTasks() async {
     try {
       final result = await _get('/tasks/assigned');
-      if (result is List) {
-        return result.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+      if (result is Map) {
+        final items = result['items'] ??
+            result['data'] ??
+            result['content'] ??
+            result['tasks'];
+        if (items is List) {
+          _log('📋 Tasks loaded: ${items.length}');
+          return items
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+        }
       }
+      if (result is List) {
+        _log('📋 Tasks loaded: ${result.length}');
+        return result
+            .map((e) => Map<String, dynamic>.from(e as Map))
+            .toList();
+      }
+      _log('⚠️ Tasks response had no items');
       return [];
     } catch (e) {
-      print('Error fetching tasks: $e');
+      _log('Error fetching tasks: $e');
       return [];
     }
   }
@@ -1152,7 +1375,7 @@ class BackendApiService {
       final result = await _get('/tasks/$taskId');
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error fetching task: $e');
+      _log('Error fetching task: $e');
       return null;
     }
   }
@@ -1166,7 +1389,7 @@ class BackendApiService {
       });
       return true;
     } catch (e) {
-      print('Error updating task status: $e');
+      _log('Error updating task status: $e');
       return false;
     }
   }
@@ -1179,7 +1402,7 @@ class BackendApiService {
       });
       return true;
     } catch (e) {
-      print('Error updating subtask: $e');
+      _log('Error updating subtask: $e');
       return false;
     }
   }
@@ -1195,7 +1418,7 @@ class BackendApiService {
           auth: true);
       return true;
     } catch (e) {
-      print('Error adding comment: $e');
+      _log('Error adding comment: $e');
       return false;
     }
   }
@@ -1208,7 +1431,7 @@ class BackendApiService {
       });
       return true;
     } catch (e) {
-      print('Error updating description: $e');
+      _log('Error updating description: $e');
       return false;
     }
   }
@@ -1225,11 +1448,30 @@ class BackendApiService {
     required String organization, // department
     String priority = 'Medium',
     String? dueDate,
+    List<String> assigneeIds = const [],
     String? assigneeId,
     List<String> tags = const [],
     List<Map<String, String>> subtasks = const [],
   }) async {
     try {
+      final resolvedAssignees = <String>[];
+      final seen = <String>{};
+      void addAssignee(String? id) {
+        if (id == null) return;
+        final trimmed = id.trim();
+        if (trimmed.isEmpty || seen.contains(trimmed)) return;
+        resolvedAssignees.add(trimmed);
+        seen.add(trimmed);
+      }
+
+      for (final id in assigneeIds) {
+        addAssignee(id);
+      }
+      addAssignee(assigneeId);
+
+      final primaryAssignee =
+          resolvedAssignees.isNotEmpty ? resolvedAssignees.first : null;
+
       final result = await _post(
           '/tasks',
           {
@@ -1238,7 +1480,8 @@ class BackendApiService {
             'organization': organization,
             'priority': priority,
             if (dueDate != null) 'dueDate': dueDate,
-            if (assigneeId != null) 'assigneeId': assigneeId,
+            if (resolvedAssignees.isNotEmpty) 'assigneeIds': resolvedAssignees,
+            if (primaryAssignee != null) 'assigneeId': primaryAssignee,
             'tags': tags,
             'subtasks': subtasks,
             'attachments': [],
@@ -1246,7 +1489,7 @@ class BackendApiService {
           auth: true);
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error creating task: $e');
+      _log('Error creating task: $e');
       return null;
     }
   }
@@ -1262,7 +1505,7 @@ class BackendApiService {
           auth: true);
       return Map<String, dynamic>.from(result);
     } catch (e) {
-      print('Error adding subtask: $e');
+      _log('Error adding subtask: $e');
       return null;
     }
   }
@@ -1293,7 +1536,7 @@ class BackendApiService {
       }
       return false;
     } catch (e) {
-      print('Error deleting task: $e');
+      _log('Error deleting task: $e');
       return false;
     }
   }
@@ -1323,7 +1566,7 @@ class BackendApiService {
       await _post('/auth/reset-password', {'email': email});
       return true;
     } catch (e) {
-      print('Error requesting password reset: $e');
+      _log('Error requesting password reset: $e');
       return false;
     }
   }
@@ -1334,7 +1577,7 @@ class BackendApiService {
       final result = await _post('/auth/verify-reset-code', {'code': code});
       return result['valid'] == true;
     } catch (e) {
-      print('Error verifying reset code: $e');
+      _log('Error verifying reset code: $e');
       return false;
     }
   }
@@ -1351,7 +1594,7 @@ class BackendApiService {
       });
       return true;
     } catch (e) {
-      print('Error completing password reset: $e');
+      _log('Error completing password reset: $e');
       return false;
     }
   }
@@ -1367,7 +1610,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching Aura dashboard: $e');
+      _log('Error fetching Aura dashboard: $e');
       return null;
     }
   }
@@ -1382,7 +1625,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching Aura dashboard for $employeeId: $e');
+      _log('Error fetching Aura dashboard for $employeeId: $e');
       return null;
     }
   }
@@ -1415,7 +1658,7 @@ class BackendApiService {
           auth: true);
       return true;
     } catch (e) {
-      print('Error submitting peer feedback: $e');
+      _log('Error submitting peer feedback: $e');
       return false;
     }
   }
@@ -1429,7 +1672,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching received peer feedback: $e');
+      _log('Error fetching received peer feedback: $e');
       return null;
     }
   }
@@ -1444,7 +1687,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching auto Aura dashboard: $e');
+      _log('Error fetching auto Aura dashboard: $e');
       return null;
     }
   }
@@ -1460,7 +1703,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching auto Aura for $employeeId: $e');
+      _log('Error fetching auto Aura for $employeeId: $e');
       return null;
     }
   }
@@ -1474,7 +1717,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching department KPIs: $e');
+      _log('Error fetching department KPIs: $e');
       return null;
     }
   }
@@ -1527,7 +1770,7 @@ class BackendApiService {
           auth: true);
       return true;
     } catch (e) {
-      print('Error submitting extended peer feedback: $e');
+      _log('Error submitting extended peer feedback: $e');
       return false;
     }
   }
@@ -1541,7 +1784,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching peer feedback status: $e');
+      _log('Error fetching peer feedback status: $e');
       return null;
     }
   }
@@ -1558,7 +1801,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error checking certificate status: $e');
+      _log('Error checking certificate status: $e');
       return null;
     }
   }
@@ -1596,7 +1839,7 @@ class BackendApiService {
       } catch (_) {}
       throw Exception('Failed to delete account (${resp.statusCode})');
     } catch (e) {
-      print('Error deleting account: $e');
+      _log('Error deleting account: $e');
       rethrow;
     }
   }
@@ -1612,7 +1855,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching compliance items: $e');
+      _log('Error fetching compliance items: $e');
       return [];
     }
   }
@@ -1645,24 +1888,23 @@ class BackendApiService {
       );
       return result;
     } catch (e) {
-      print('Error submitting compliance: $e');
+      _log('Error submitting compliance: $e');
       rethrow;
     }
   }
 
   /// Submit a policy acknowledgement
-  Future<bool> acknowledgePolicy(String policyId) async {
+  Future<Map<String, dynamic>?> acknowledgePolicy(String policyId) async {
     try {
-      await submitCompliance(policyId: policyId, type: 'policy');
-      return true;
+      return await submitCompliance(policyId: policyId, type: 'policy');
     } catch (e) {
-      print('Error acknowledging policy: $e');
-      return false;
+      _log('Error acknowledging policy: $e');
+      return null;
     }
   }
 
   /// Submit a compliance document upload
-  Future<bool> submitComplianceDocument({
+  Future<Map<String, dynamic>?> submitComplianceDocument({
     required String policyId,
     required String filePath,
     required String fileName,
@@ -1678,16 +1920,15 @@ class BackendApiService {
       }
 
       // Then submit the compliance
-      await submitCompliance(
+      return await submitCompliance(
         policyId: policyId,
         type: 'upload',
         fileUrl: fileUrl,
         fileName: fileName,
       );
-      return true;
     } catch (e) {
-      print('Error submitting compliance document: $e');
-      return false;
+      _log('Error submitting compliance document: $e');
+      return null;
     }
   }
 
@@ -1711,7 +1952,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching team KPIs: $e');
+      _log('Error fetching team KPIs: $e');
       return null;
     }
   }
@@ -1725,7 +1966,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching team insight: $e');
+      _log('Error fetching team insight: $e');
       return null;
     }
   }
@@ -1748,7 +1989,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching team score: $e');
+      _log('Error fetching team score: $e');
       return null;
     }
   }
@@ -1771,7 +2012,7 @@ class BackendApiService {
       }
       return null;
     } catch (e) {
-      print('Error fetching individual KPIs: $e');
+      _log('Error fetching individual KPIs: $e');
       return null;
     }
   }
@@ -1869,7 +2110,7 @@ class BackendApiService {
       final result = await _get('/api/notifications/unread-count');
       return result['unreadCount'] as int? ?? 0;
     } catch (e) {
-      print('Error fetching unread count: $e');
+      _log('Error fetching unread count: $e');
       return 0;
     }
   }
@@ -1880,7 +2121,7 @@ class BackendApiService {
       await _post('/api/notifications/$notificationId/read', {}, auth: true);
       return true;
     } catch (e) {
-      print('Error marking notification as read: $e');
+      _log('Error marking notification as read: $e');
       return false;
     }
   }
@@ -1891,7 +2132,7 @@ class BackendApiService {
       await _post('/api/notifications/mark-all-read', {}, auth: true);
       return true;
     } catch (e) {
-      print('Error marking all notifications as read: $e');
+      _log('Error marking all notifications as read: $e');
       return false;
     }
   }
@@ -1913,7 +2154,7 @@ class BackendApiService {
       }
       return [];
     } catch (e) {
-      print('Error fetching department stats: $e');
+      _log('Error fetching department stats: $e');
       return [];
     }
   }
@@ -1964,7 +2205,7 @@ class BackendApiService {
       await _delete('/api/kpi/team-kpi/$kpiId');
       return true;
     } catch (e) {
-      print('Error deleting KPI: $e');
+      _log('Error deleting KPI: $e');
       return false;
     }
   }

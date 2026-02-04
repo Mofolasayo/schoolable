@@ -72,7 +72,7 @@ class _BouncingLogoState extends State<_BouncingLogo>
         mainAxisSize: MainAxisSize.min,
         children: [
           Image.asset(
-            'assets/images/schoolable-logo.jpg',
+            'assets/images/worksight_logo full.jpg',
             width: 260,
           ),
         ],

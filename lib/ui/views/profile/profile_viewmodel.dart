@@ -97,6 +97,17 @@ class ProfileViewModel extends BaseViewModel {
     rebuildUi();
   }
 
+  Future<void> refresh() async {
+    try {
+      final profile = await _backendService.getUserProfile(forceRefresh: true);
+      if (profile != null) {
+        _updateProfileData(profile);
+      }
+    } catch (e) {
+      // Keep existing data on refresh failure
+    }
+  }
+
   Future<void> updateProfile({
     String? fullName,
     String? jobTitle,
@@ -176,6 +187,10 @@ class ProfileViewModel extends BaseViewModel {
 
   void navigateToSecurity() {
     _nav.navigateTo(Routes.securityView);
+  }
+
+  void navigateToLeave() {
+    _nav.navigateTo(Routes.leaveView);
   }
 
   Future<void> pickAndUploadAvatar() async {

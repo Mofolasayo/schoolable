@@ -1,55 +1,66 @@
+import 'dart:convert';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:stacked/stacked.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 
 import 'reports_viewmodel.dart';
 
-// Date formatting helpers (avoid intl dependency)
+// Date formatting helpers
 String _formatShortDate(DateTime date) {
-  const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec'
-  ];
-  return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}';
+  return DateFormat('EEE, MMM d').format(date);
 }
 
 String _formatFullDate(DateTime date) {
-  const weekdays = [
-    'Monday',
-    'Tuesday',
-    'Wednesday',
-    'Thursday',
-    'Friday',
-    'Saturday',
-    'Sunday'
-  ];
-  const months = [
-    'January',
-    'February',
-    'March',
-    'April',
-    'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December'
-  ];
-  return '${weekdays[date.weekday - 1]}, ${months[date.month - 1]} ${date.day}, ${date.year}';
+  return DateFormat('EEEE, MMMM d, y').format(date);
+}
+
+String _formatStatusLabel(String status) {
+  final normalized = status.replaceAll('_', ' ').trim().toLowerCase();
+  if (normalized.isEmpty) return status;
+  return normalized
+      .split(' ')
+      .map((word) =>
+          word.isEmpty ? word : word[0].toUpperCase() + word.substring(1))
+      .join(' ');
+}
+
+Color _statusColor(String status) {
+  final normalized = status.toLowerCase().replaceAll(' ', '_');
+  switch (normalized) {
+    case 'reviewed':
+      return kcTealColor;
+    case 'flagged':
+      return kcRoseColor;
+    case 'submitted':
+      return kcPrimaryColor;
+    default:
+      return kcTextMutedColor;
+  }
+}
+
+List<String> _parseJsonList(dynamic value) {
+  if (value == null) return [];
+  if (value is List) {
+    return value.map((item) => item.toString()).toList();
+  }
+  if (value is String && value.trim().isNotEmpty) {
+    try {
+      final decoded = jsonDecode(value);
+      if (decoded is List) {
+        return decoded.map((item) => item.toString()).toList();
+      }
+    } catch (_) {}
+  }
+  return [];
+}
+
+Color _getScoreColor(double score) {
+  if (score >= 80) return kcTealColor;
+  if (score >= 60) return kcAmberColor;
+  return kcRoseColor;
 }
 
 class ReportsView extends StackedView<ReportsViewModel> {
@@ -58,6 +69,10 @@ class ReportsView extends StackedView<ReportsViewModel> {
   @override
   Widget builder(
       BuildContext context, ReportsViewModel viewModel, Widget? child) {
+    const previewLimit = 5;
+    final previewReports =
+        viewModel.reports.take(previewLimit).toList(growable: false);
+
     return Scaffold(
       backgroundColor: kcBackgroundColor,
       body: SafeArea(
@@ -74,21 +89,37 @@ class ReportsView extends StackedView<ReportsViewModel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Header
-                    const Text(
-                      'Daily Reports',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: kcTextColor,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Submit your daily work report',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: kcTextMutedColor.withOpacity(0.8),
-                      ),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Daily Reports',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w600,
+                                  color: kcTextColor,
+                                ),
+                              ),
+                              SizedBox(height: 4),
+                              Text(
+                                'Submit today\'s report',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: kcTextMutedColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        _HeaderIconButton(
+                          icon: Icons.history_rounded,
+                          onTap: () => _openHistory(context, viewModel),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 24),
 
@@ -106,9 +137,9 @@ class ReportsView extends StackedView<ReportsViewModel> {
                       _buildTodayStatus(context, viewModel),
                     const SizedBox(height: 24),
 
-                    // Recent Reports
+                    // Latest Reports
                     const Text(
-                      'Recent Reports',
+                      'Latest Reports',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -129,7 +160,7 @@ class ReportsView extends StackedView<ReportsViewModel> {
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverToBoxAdapter(
-                  child: _buildEmptyState(),
+                  child: const _EmptyReportsState(),
                 ),
               )
             else
@@ -138,14 +169,17 @@ class ReportsView extends StackedView<ReportsViewModel> {
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
-                      if (index >= viewModel.reports.length) return null;
-                      final report = viewModel.reports[index];
+                      if (index >= previewReports.length) return null;
+                      final report = previewReports[index];
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: _buildReportCard(context, report, viewModel),
+                        child: _ReportCard(
+                          report: report,
+                          onTap: () => _showReportDetail(context, report),
+                        ),
                       );
                     },
-                    childCount: viewModel.reports.length,
+                    childCount: previewReports.length,
                   ),
                 ),
               ),
@@ -173,8 +207,7 @@ class ReportsView extends StackedView<ReportsViewModel> {
       children: [
         Expanded(
           child: _buildStatCard(
-            icon: Icons.calendar_today_rounded,
-            iconColor: kcPrimaryColor,
+            dotColor: kcPrimaryColor,
             label: 'This Week',
             value: '${viewModel.weeklyReportsSubmitted}/5',
             subtitle: 'reports',
@@ -183,8 +216,7 @@ class ReportsView extends StackedView<ReportsViewModel> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            icon: Icons.star_rounded,
-            iconColor: kcAmberColor,
+            dotColor: kcAmberColor,
             label: 'Avg. Score',
             value: viewModel.weeklyAverageScore > 0
                 ? '${viewModel.weeklyAverageScore.toStringAsFixed(0)}%'
@@ -195,8 +227,7 @@ class ReportsView extends StackedView<ReportsViewModel> {
         const SizedBox(width: 12),
         Expanded(
           child: _buildStatCard(
-            icon: Icons.trending_up_rounded,
-            iconColor: kcTealColor,
+            dotColor: kcTealColor,
             label: 'Quarter',
             value: viewModel.quarterlyAverageScore > 0
                 ? '${viewModel.quarterlyAverageScore.toStringAsFixed(0)}%'
@@ -209,8 +240,7 @@ class ReportsView extends StackedView<ReportsViewModel> {
   }
 
   Widget _buildStatCard({
-    required IconData icon,
-    required Color iconColor,
+    required Color dotColor,
     required String label,
     required String value,
     required String subtitle,
@@ -218,27 +248,49 @@ class ReportsView extends StackedView<ReportsViewModel> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: kcSurfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: kcBorderColor),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 24),
-          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: dotColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: kcTextMutedColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
           Text(
             value,
             style: const TextStyle(
               fontSize: 18,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
               color: kcTextColor,
             ),
           ),
+          const SizedBox(height: 4),
           Text(
             subtitle,
-            style: TextStyle(
-              fontSize: 10,
-              color: kcTextMutedColor.withOpacity(0.8),
+            style: const TextStyle(
+              fontSize: 11,
+              color: kcTextMutedColor,
             ),
           ),
         ],
@@ -263,21 +315,22 @@ class ReportsView extends StackedView<ReportsViewModel> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: kcSurfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: kcBorderColor),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 24,
-            height: 24,
+            width: 60,
+            height: 10,
             decoration: BoxDecoration(
               color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(4),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Container(
             width: 40,
             height: 20,
@@ -353,78 +406,64 @@ class ReportsView extends StackedView<ReportsViewModel> {
     final hasSubmitted = viewModel.hasSubmittedToday;
     final todayReport = viewModel.todayReport;
     final isLate = viewModel.isLateSubmission;
+    final accentColor =
+        hasSubmitted ? kcTealColor : (isLate ? kcRoseColor : kcAmberColor);
 
     if (hasSubmitted && todayReport != null) {
-      // Show submitted report status
       return Container(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              kcTealColor.withOpacity(0.1),
-              kcTealColor.withOpacity(0.05)
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: kcSurfaceColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kcTealColor.withOpacity(0.3)),
+          border: Border.all(color: accentColor.withOpacity(0.2)),
         ),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: kcTealColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: accentColor.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.check_circle_rounded,
-                color: kcTealColor,
-                size: 28,
+                color: accentColor,
+                size: 22,
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    '✓ Today\'s Report Submitted',
+                    'Report submitted',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: kcTealColor,
+                      color: kcTextColor,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'AI Score: ${todayReport['aiScore']?.toStringAsFixed(0) ?? '--'}%',
-                    style: TextStyle(
-                      fontSize: 13,
+                    'AI score: ${todayReport['aiScore']?.toStringAsFixed(0) ?? '--'}%',
+                    style: const TextStyle(
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: kcTextMutedColor.withOpacity(0.8),
+                      color: kcTextMutedColor,
                     ),
                   ),
                 ],
               ),
             ),
-            GestureDetector(
-              onTap: () => _showReportDetail(context, todayReport),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: kcTealColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Text(
-                  'View',
-                  style: TextStyle(
-                    color: kcTealColor,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
-                  ),
+            TextButton(
+              onPressed: () => _showReportDetail(context, todayReport),
+              child: const Text(
+                'View',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: kcPrimaryColor,
                 ),
               ),
             ),
@@ -433,297 +472,66 @@ class ReportsView extends StackedView<ReportsViewModel> {
       );
     }
 
-    // Show pending report - PROMINENT ACTION CARD
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isLate
-              ? [kcRoseColor.withOpacity(0.15), kcRoseColor.withOpacity(0.08)]
-              : [
-                  kcAmberColor.withOpacity(0.15),
-                  kcAmberColor.withOpacity(0.08)
-                ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: kcSurfaceColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isLate
-              ? kcRoseColor.withOpacity(0.4)
-              : kcAmberColor.withOpacity(0.4),
-          width: 1.5,
-        ),
+        border: Border.all(color: accentColor.withOpacity(0.25)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isLate
-                      ? kcRoseColor.withOpacity(0.15)
-                      : kcAmberColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  isLate
-                      ? Icons.warning_amber_rounded
-                      : Icons.edit_note_rounded,
-                  color: isLate ? kcRoseColor : kcAmberColor,
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isLate ? '⚠️ Report Overdue!' : '📝 Report Pending',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: isLate ? kcRoseColor : kcAmberColor,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      viewModel.timeRemainingToday,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        color: kcTextMutedColor.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'You haven\'t submitted your daily report yet. Share what you accomplished today to track your progress and boost your Aura score.',
-            style: TextStyle(
-              fontSize: 13,
-              height: 1.4,
-              color: kcTextMutedColor.withOpacity(0.9),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: accentColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              isLate ? Icons.warning_amber_rounded : Icons.edit_note_rounded,
+              color: accentColor,
+              size: 22,
             ),
           ),
-          const SizedBox(height: 16),
-          // Submit Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _showSubmitReportSheet(context, viewModel),
-              icon: const Icon(Icons.add_circle_outline, size: 20),
-              label: const Text(
-                'Submit Today\'s Report',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isLate ? kcRoseColor : kcPrimaryColor,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Container(
-      padding: const EdgeInsets.all(40),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: kcBorderColor),
-      ),
-      child: Column(
-        children: [
-          Icon(
-            Icons.description_outlined,
-            size: 64,
-            color: kcTextMutedColor.withOpacity(0.3),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No Reports Yet',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: kcTextColor,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Start submitting daily reports to track your progress',
-            style: TextStyle(
-              fontSize: 13,
-              color: kcTextMutedColor.withOpacity(0.8),
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildReportCard(BuildContext context, Map<String, dynamic> report,
-      ReportsViewModel viewModel) {
-    final reportDate =
-        DateTime.tryParse(report['reportDate'] ?? '') ?? DateTime.now();
-    final aiScore = report['aiScore'] as num?;
-    final status = report['status'] as String? ?? 'submitted';
-
-    Color statusColor = kcPrimaryColor;
-    if (status == 'reviewed') statusColor = kcTealColor;
-    if (status == 'flagged') statusColor = kcRoseColor;
-
-    return GestureDetector(
-      onTap: () => _showReportDetail(context, report),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: kcBorderColor),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: kcPrimaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        _formatShortDate(reportDate),
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: kcPrimaryColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        status.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                          color: statusColor,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (aiScore != null)
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color:
-                          _getScoreColor(aiScore.toDouble()).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          size: 14,
-                          color: _getScoreColor(aiScore.toDouble()),
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${aiScore.toStringAsFixed(0)}%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: _getScoreColor(aiScore.toDouble()),
-                          ),
-                        ),
-                      ],
-                    ),
+                Text(
+                  isLate ? 'Report overdue' : 'Report pending',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: kcTextColor,
                   ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  viewModel.timeRemainingToday,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: kcTextMutedColor,
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              report['tasksCompleted'] ?? '',
-              style: const TextStyle(
-                fontSize: 14,
-                color: kcTextColor,
-                height: 1.4,
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (report['aiFeedback'] != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: kcBackgroundColor,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(
-                      Icons.lightbulb_outline,
-                      size: 16,
-                      color: kcAmberColor.withOpacity(0.8),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        report['aiFeedback'],
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: kcTextMutedColor.withOpacity(0.9),
-                          fontStyle: FontStyle.italic,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
+          ),
+          // TextButton(
+          //   onPressed: () => _showSubmitReportSheet(context, viewModel),
+          //   child: const Text(
+          //     'Submit',
+          //     style: TextStyle(
+          //       fontSize: 12,
+          //       fontWeight: FontWeight.w600,
+          //       color: kcPrimaryColor,
+          //     ),
+          //   ),
+          // ),
+        ],
       ),
     );
-  }
-
-  Color _getScoreColor(double score) {
-    if (score >= 80) return kcTealColor;
-    if (score >= 60) return kcAmberColor;
-    return kcRoseColor;
   }
 
   void _showSubmitReportSheet(
@@ -733,6 +541,14 @@ class ReportsView extends StackedView<ReportsViewModel> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => _SubmitReportSheet(viewModel: viewModel),
+    );
+  }
+
+  void _openHistory(BuildContext context, ReportsViewModel viewModel) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => _ReportHistoryView(viewModel: viewModel),
+      ),
     );
   }
 
@@ -751,6 +567,297 @@ class ReportsView extends StackedView<ReportsViewModel> {
   @override
   void onViewModelReady(ReportsViewModel viewModel) {
     viewModel.initialize();
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({required this.icon, required this.onTap});
+
+  final IconData icon;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: kcSurfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: kcBorderColor),
+        ),
+        child: Icon(icon, size: 20, color: kcTextMutedColor),
+      ),
+    );
+  }
+}
+
+class _EmptyReportsState extends StatelessWidget {
+  const _EmptyReportsState({
+    this.title = 'No Reports Yet',
+    this.subtitle = 'Start submitting daily reports to track your progress',
+  });
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: kcSurfaceColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: kcBorderColor),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.description_outlined,
+            size: 56,
+            color: kcTextMutedColor.withOpacity(0.3),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: kcTextColor,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 12,
+              color: kcTextMutedColor.withOpacity(0.8),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReportCard extends StatelessWidget {
+  const _ReportCard({required this.report, required this.onTap});
+
+  final Map<String, dynamic> report;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final reportDate =
+        DateTime.tryParse(report['reportDate'] ?? '') ?? DateTime.now();
+    final aiScore = report['aiScore'] as num?;
+    final status = report['status'] as String? ?? 'submitted';
+    final statusColor = _statusColor(status);
+    final statusLabel = _formatStatusLabel(status);
+    final strengths = _parseJsonList(report['aiStrengths']);
+    final improvements = _parseJsonList(report['aiImprovements']);
+    final auraTips = _parseJsonList(report['aiAuraBoostTips']);
+    final suggestions = _parseJsonList(report['aiSuggestions']);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: kcSurfaceColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: kcBorderColor),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatShortDate(reportDate),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: kcTextMutedColor,
+                  ),
+                ),
+                if (aiScore != null)
+                  _ReportPill(
+                    label: '${aiScore.toStringAsFixed(0)}%',
+                    icon: Icons.auto_awesome,
+                    color: _getScoreColor(aiScore.toDouble()),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            _ReportPill(label: statusLabel, color: statusColor),
+            const SizedBox(height: 10),
+            Text(
+              report['tasksCompleted'] ?? '',
+              style: const TextStyle(
+                fontSize: 14,
+                color: kcTextColor,
+                height: 1.4,
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (report['aiFeedback'] != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                report['aiFeedback'],
+                style: TextStyle(
+                  fontSize: 12,
+                  color: kcTextMutedColor.withOpacity(0.9),
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReportHistoryView extends StatelessWidget {
+  const _ReportHistoryView({required this.viewModel});
+
+  final ReportsViewModel viewModel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: kcBackgroundColor,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          'Report History',
+          style: TextStyle(
+            color: kcTextColor,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        iconTheme: const IconThemeData(color: kcTextColor),
+      ),
+      body: AnimatedBuilder(
+        animation: viewModel,
+        builder: (context, _) {
+          final reports = viewModel.filteredReports;
+          final hasFilter = viewModel.hasHistoryFilter;
+
+          if (viewModel.isBusy && viewModel.reports.isEmpty) {
+            return const Center(child: CupertinoActivityIndicator());
+          }
+
+          if (reports.isEmpty) {
+            return Padding(
+              padding: const EdgeInsets.all(20),
+              child: _EmptyReportsState(
+                title: hasFilter ? 'No reports in range' : 'No reports found',
+                subtitle: hasFilter
+                    ? 'Try a different date range.'
+                    : 'Start submitting daily reports to track your progress',
+              ),
+            );
+          }
+
+          return CustomScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            slivers: [
+              CupertinoSliverRefreshControl(onRefresh: viewModel.refresh),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          viewModel.historyRangeLabel,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: kcTextMutedColor,
+                          ),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          final range = await showDateRangePicker(
+                            context: context,
+                            firstDate: DateTime(DateTime.now().year - 1),
+                            lastDate: DateTime(DateTime.now().year + 1),
+                          );
+                          if (range != null) {
+                            viewModel.setHistoryDateRange(
+                                range.start, range.end);
+                          }
+                        },
+                        child: const Text(
+                          'Filter',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: kcPrimaryColor,
+                          ),
+                        ),
+                      ),
+                      if (hasFilter)
+                        TextButton(
+                          onPressed: viewModel.clearHistoryDateRange,
+                          child: const Text(
+                            'Clear',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: kcTextMutedColor,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+              SliverPadding(
+                padding: const EdgeInsets.all(20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index >= reports.length) return null;
+                      final report = reports[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ReportCard(
+                          report: report,
+                          onTap: () => showModalBottomSheet(
+                            context: context,
+                            isScrollControlled: true,
+                            backgroundColor: Colors.transparent,
+                            builder: (context) =>
+                                _ReportDetailSheet(report: report),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: reports.length,
+                  ),
+                ),
+              ),
+              const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+            ],
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -1032,11 +1139,17 @@ class _ReportDetailSheet extends StatelessWidget {
         DateTime.tryParse(report['reportDate'] ?? '') ?? DateTime.now();
     final aiScore = report['aiScore'] as num?;
     final status = report['status'] as String? ?? 'submitted';
+    final statusColor = _statusColor(status);
+    final statusLabel = _formatStatusLabel(status);
+    final strengths = _parseJsonList(report['aiStrengths']);
+    final improvements = _parseJsonList(report['aiImprovements']);
+    final auraTips = _parseJsonList(report['aiAuraBoostTips']);
+    final suggestions = _parseJsonList(report['aiSuggestions']);
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: kcSurfaceColor,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24),
           topRight: Radius.circular(24),
@@ -1060,27 +1173,17 @@ class _ReportDetailSheet extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      _formatFullDate(reportDate),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: kcTextColor,
-                      ),
+                Expanded(
+                  child: Text(
+                    _formatFullDate(reportDate),
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                      color: kcTextColor,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Status: ${status.toUpperCase()}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: kcTextMutedColor.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+                _ReportPill(label: statusLabel, color: statusColor),
                 IconButton(
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close_rounded),
@@ -1094,20 +1197,16 @@ class _ReportDetailSheet extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 20),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    kcPrimaryColor.withOpacity(0.1),
-                    Colors.purple.withOpacity(0.05),
-                  ],
-                ),
+                color: kcSurfaceColor,
                 borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: kcBorderColor),
               ),
               child: Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: kcPrimaryColor.withOpacity(0.1),
+                      color: kcPrimaryColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: const Icon(
@@ -1124,7 +1223,7 @@ class _ReportDetailSheet extends StatelessWidget {
                         const Text(
                           'AI Assessment Score',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: kcTextColor,
                           ),
@@ -1134,7 +1233,7 @@ class _ReportDetailSheet extends StatelessWidget {
                           report['aiFeedback'] ?? 'No feedback available',
                           style: TextStyle(
                             fontSize: 12,
-                            color: kcTextMutedColor.withOpacity(0.8),
+                            color: kcTextMutedColor,
                           ),
                         ),
                       ],
@@ -1143,8 +1242,8 @@ class _ReportDetailSheet extends StatelessWidget {
                   Text(
                     '${aiScore.toStringAsFixed(0)}%',
                     style: const TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w600,
                       color: kcPrimaryColor,
                     ),
                   ),
@@ -1166,6 +1265,17 @@ class _ReportDetailSheet extends StatelessWidget {
                         'Tasks In Progress', report['tasksInProgress']),
                   if (report['blockers'] != null)
                     _buildSection('Blockers', report['blockers']),
+                  if (strengths.isNotEmpty)
+                    _buildListSection('Strengths', strengths, kcTealColor),
+                  if (improvements.isNotEmpty)
+                    _buildListSection(
+                        'Improvements', improvements, kcAmberColor),
+                  if (suggestions.isNotEmpty)
+                    _buildListSection(
+                        'Tomorrow Priorities', suggestions, kcPrimaryColor),
+                  if (auraTips.isNotEmpty)
+                    _buildListSection(
+                        'Aura Boost Tips', auraTips, kcPurpleColor),
                   if (report['plannedForTomorrow'] != null)
                     _buildSection(
                         'Planned for Tomorrow', report['plannedForTomorrow']),
@@ -1191,9 +1301,9 @@ class _ReportDetailSheet extends StatelessWidget {
           Text(
             title,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
-              color: kcTextColor,
+              color: kcTextMutedColor,
             ),
           ),
           const SizedBox(height: 8),
@@ -1201,16 +1311,112 @@ class _ReportDetailSheet extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: kcBackgroundColor,
+              color: kcSurfaceColor,
               borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: kcBorderColor),
             ),
             child: Text(
               content,
               style: TextStyle(
                 fontSize: 14,
-                color: kcTextMutedColor.withOpacity(0.9),
+                color: kcTextColor,
                 height: 1.5,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildListSection(String title, List<String> items, Color accent) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: accent.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: accent.withOpacity(0.2)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: accent,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.only(top: 6),
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: accent,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        item,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: kcTextColor,
+                          height: 1.35,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ReportPill extends StatelessWidget {
+  const _ReportPill({required this.label, required this.color, this.icon});
+
+  final String label;
+  final Color color;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
             ),
           ),
         ],

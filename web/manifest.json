@@ -1,6 +1,6 @@
 {
-    "name": "schoolable",
-    "short_name": "schoolable",
+    "name": "WorkSight",
+    "short_name": "WorkSight",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

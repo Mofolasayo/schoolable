@@ -4,6 +4,7 @@ import 'package:schoolable/app/app.router.dart';
 import 'package:stacked_services/stacked_services.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/services/notification_service.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 class StartupViewModel extends BaseViewModel {
   final _navigationService = locator<NavigationService>();
@@ -20,9 +21,9 @@ class StartupViewModel extends BaseViewModel {
     if (hasSession) {
       try {
         // Use the dedicated endpoint to check profile completion status from database
-        print('📋 Checking profile completion status...');
+        AppLogger.log('📋 Checking profile completion status...');
         final completionStatus = await _backend.checkProfileComplete();
-        print('📋 Startup completion status: $completionStatus');
+        AppLogger.log('📋 Startup completion status: $completionStatus');
 
         // If we get a valid response (no error), we have a valid session
         if (completionStatus['error'] == null) {
@@ -32,22 +33,22 @@ class StartupViewModel extends BaseViewModel {
 
           if (!isComplete) {
             // Profile incomplete, navigate to complete profile
-            print('⚠️ Profile not complete. Going to CompleteProfileView.');
+            AppLogger.log('⚠️ Profile not complete. Going to CompleteProfileView.');
             _navigationService.replaceWithCompleteProfileView(
               email: email,
               fullName: fullName,
             );
           } else {
             // Profile complete, navigate to home
-            print('✅ Profile complete. Going to HomeView.');
-            await _notificationService.initialize();
+            AppLogger.log('✅ Profile complete. Going to HomeView.');
+            await _notificationService.initialize(forceRegister: true);
             _navigationService.replaceWithHomeView();
           }
           return;
         }
       } catch (e) {
         // Token is invalid or expired, clear session and go to login
-        print('Session validation failed: $e');
+        AppLogger.log('Session validation failed: $e');
         await _backend.clearSession();
       }
     }

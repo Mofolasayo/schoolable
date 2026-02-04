@@ -4,6 +4,7 @@ import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/services/cache_service.dart';
 import 'package:schoolable/services/websocket_service.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 class ChatChannel {
   final String id;
@@ -100,6 +101,9 @@ class ChatViewModel extends BaseViewModel {
   Set<String> _onlineUserIds = {};
   Set<String> get onlineUserIds => _onlineUserIds;
 
+  bool _messagingEnabled = true;
+  bool get messagingEnabled => _messagingEnabled;
+
   bool _isWsConnected = false;
   bool get isWsConnected => _isWsConnected;
 
@@ -109,6 +113,12 @@ class ChatViewModel extends BaseViewModel {
 
   void initialize() async {
     setBusy(true);
+
+    await _loadFeatureFlags();
+    if (!_messagingEnabled) {
+      setBusy(false);
+      return;
+    }
 
     // 1. Load cached data immediately (instant UI)
     await _loadCachedData();
@@ -145,12 +155,25 @@ class ChatViewModel extends BaseViewModel {
     setBusy(false);
   }
 
+  Future<void> _loadFeatureFlags() async {
+    try {
+      final refData = await _backendService.getReferenceData();
+      final flags = refData['featureFlags'];
+      if (flags is Map) {
+        _messagingEnabled = flags['messagingEnabled'] == true;
+      }
+      notifyListeners();
+    } catch (e) {
+      AppLogger.log('Error fetching feature flags: $e');
+    }
+  }
+
   /// Initialize WebSocket connection
   Future<void> _initializeWebSocket() async {
     try {
       final token = await _backendService.getCurrentToken();
       if (token == null) {
-        print('⚠️ No token available for WebSocket');
+        AppLogger.log('⚠️ No token available for WebSocket');
         return;
       }
 
@@ -163,7 +186,7 @@ class ChatViewModel extends BaseViewModel {
       // Connect
       await _wsService.connect(token);
     } catch (e) {
-      print('⚠️ WebSocket initialization failed: $e');
+      AppLogger.log('⚠️ WebSocket initialization failed: $e');
       _startPolling();
     }
   }
@@ -173,10 +196,10 @@ class ChatViewModel extends BaseViewModel {
     notifyListeners();
 
     if (connected) {
-      print('✅ WebSocket connected - stopping polling');
+      AppLogger.log('✅ WebSocket connected - stopping polling');
       _pollingTimer?.cancel();
     } else {
-      print('⚠️ WebSocket disconnected - starting polling');
+      AppLogger.log('⚠️ WebSocket disconnected - starting polling');
       _startPolling();
     }
   }
@@ -358,7 +381,7 @@ class ChatViewModel extends BaseViewModel {
       await fetchChannels();
       return result['id']?.toString();
     } catch (e) {
-      print('Error starting DM: $e');
+      AppLogger.log('Error starting DM: $e');
       return null;
     } finally {
       setBusy(false);

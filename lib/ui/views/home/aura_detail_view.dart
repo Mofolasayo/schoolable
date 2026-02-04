@@ -23,15 +23,24 @@ class _AuraDetailViewState extends State<AuraDetailView> {
   double myKpiAverageAchievement = 0;
   bool isLoadingKpis = true;
 
-  AuraData get auraData => widget.auraData;
+  late AuraData _auraData;
+  bool auraLoadFailed = false;
+
+  AuraData get auraData => _auraData;
 
   @override
   void initState() {
     super.initState();
+    _auraData = widget.auraData;
     _fetchMyKpis();
   }
 
-  Future<void> _fetchMyKpis() async {
+  Future<void> _fetchMyKpis({bool showLoader = true}) async {
+    if (showLoader && mounted) {
+      setState(() {
+        isLoadingKpis = true;
+      });
+    }
     try {
       final backendService = locator<BackendApiService>();
       final response = await backendService.getMyIndividualKpis();
@@ -43,17 +52,66 @@ class _AuraDetailViewState extends State<AuraDetailView> {
               .toList();
           myKpiAverageAchievement =
               (response['averageAchievement'] as num?)?.toDouble() ?? 0;
-          isLoadingKpis = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
           myKpis = [];
+          myKpiAverageAchievement = 0;
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
           isLoadingKpis = false;
         });
       }
     }
+  }
+
+  Future<void> _refreshAura() async {
+    if (mounted) {
+      setState(() {
+        auraLoadFailed = false;
+      });
+    }
+
+    try {
+      final backendService = locator<BackendApiService>();
+      final data = await backendService.getAutoAuraDashboard();
+      if (data != null) {
+        if (mounted) {
+          setState(() {
+            _auraData = AuraData.fromMap(data);
+          });
+        }
+      } else {
+        final fallback = await backendService.getMyAuraDashboard();
+        if (fallback != null && mounted) {
+          setState(() {
+            _auraData = AuraData.fromMap(fallback);
+          });
+        } else if (mounted) {
+          setState(() {
+            auraLoadFailed = true;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          auraLoadFailed = true;
+        });
+      }
+    }
+  }
+
+  Future<void> _refresh() async {
+    await Future.wait([
+      _refreshAura(),
+      _fetchMyKpis(showLoader: false),
+    ]);
   }
 
   @override
@@ -63,8 +121,9 @@ class _AuraDetailViewState extends State<AuraDetailView> {
     return Scaffold(
       backgroundColor: kcBackgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: kcBackgroundColor,
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios, color: kcTextColor, size: 20),
           onPressed: () => Navigator.pop(context),
@@ -79,265 +138,163 @@ class _AuraDetailViewState extends State<AuraDetailView> {
         ),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Main Score Card
-            _buildMainScoreCard(),
-            const SizedBox(height: 32),
-
-            // Grade Info Card
-            _buildGradeInfoCard(),
-            const SizedBox(height: 32),
-
-            // My KPIs Section
-            _buildMyKpisSection(),
-            const SizedBox(height: 32),
-
-            // Pillar Breakdown
-            Row(
-              children: [
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        color: kcPrimaryColor,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (auraLoadFailed)
                 Container(
-                  width: 4,
-                  height: 24,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: kcPrimaryColor,
-                    borderRadius: BorderRadius.circular(2),
+                    color: kcAmberColor.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border:
+                        Border.all(color: kcAmberColor.withOpacity(0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline,
+                          size: 18, color: kcAmberColor),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Unable to refresh Aura data. Showing the last saved score.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: kcTextMutedColor.withOpacity(0.9),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(width: 12),
-                const Text(
-                  'Performance Breakdown',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: kcTextColor,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap a pillar to see detailed sub-metrics',
-              style: TextStyle(
-                fontSize: 14,
-                color: kcTextMutedColor.withOpacity(0.8),
-                height: 1.4,
+              // Main Score Card
+              _buildMainScoreCard(),
+              const SizedBox(height: 24),
+
+              // Grade Info Card
+              _buildGradeInfoCard(),
+              const SizedBox(height: 24),
+
+              // My KPIs Section
+              _buildMyKpisSection(),
+              const SizedBox(height: 24),
+
+              // Pillar Breakdown
+              _buildSectionHeader(
+                title: 'Performance Breakdown',
+                subtitle: 'Tap a pillar to see detailed sub-metrics',
               ),
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-            // Pillar Cards (with index for key tracking)
-            ...pillars.asMap().entries.map(
-                (entry) => _buildPillarCard(entry.value, entry.key.toString())),
+              // Pillar Cards (with index for key tracking)
+              ...pillars.asMap().entries.map(
+                  (entry) => _buildPillarCard(entry.value, entry.key.toString())),
 
-            const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
-            // Info Section
-            _buildInfoSection(),
-            const SizedBox(height: 40),
-          ],
+              // Info Section
+              _buildInfoSection(),
+              const SizedBox(height: 32),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildMainScoreCard() {
+    final auraScore =
+        auraData.qgpa > 0 ? auraData.qgpa : auraData.auraScore / 20;
+    final auraScoreText = auraScore.toStringAsFixed(1);
+    final scoreChange =
+        auraData.scoreChange != null ? auraData.scoreChange! / 20 : null;
+
     return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kcBorderColor),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
+      padding: const EdgeInsets.all(20),
+      decoration: _cardDecoration(),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Department Profile Badge
-          if (auraData.departmentProfile != null)
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: kcPrimaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.business_rounded,
-                    size: 14,
-                    color: kcPrimaryColor,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    auraData.departmentProfile!,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: kcPrimaryColor,
-                    ),
-                  ),
-                  if (auraData.automationRate != null) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: kcTealColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.auto_awesome,
-                            size: 10,
-                            color: kcTealColor,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            '${auraData.automationRate!.round()}% Auto',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: kcTealColor,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          // Large Radial Progress
-          SizedBox(
-            width: 160,
-            height: 160,
-            child: CustomPaint(
-              painter: _RadialProgressPainter(
-                value: auraData.auraScore / 100,
-                color: kcPrimaryColor,
-                backgroundColor: kcBackgroundColor,
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '${auraData.auraScore.round()}',
-                      style: const TextStyle(
-                        fontSize: 48,
-                        fontWeight: FontWeight.w800,
-                        color: kcTextColor,
-                        height: 1,
-                        letterSpacing: -2,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '/100',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: kcTextMutedColor.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-          // Daily Score Change Indicator
-          if (auraData.scoreChange != null && auraData.scoreChange != 0) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: auraData.scoreChange! > 0
-                    ? kcTealColor.withOpacity(0.1)
-                    : kcRoseColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    auraData.scoreChange! > 0
-                        ? Icons.trending_up
-                        : Icons.trending_down,
-                    size: 16,
-                    color:
-                        auraData.scoreChange! > 0 ? kcTealColor : kcRoseColor,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${auraData.scoreChange! > 0 ? '+' : ''}${auraData.scoreChange!.toStringAsFixed(1)} today',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color:
-                          auraData.scoreChange! > 0 ? kcTealColor : kcRoseColor,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-          // Grade & QGPA Badges
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _getGradeColor(auraData.grade).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Text(
-                      'Grade ${auraData.grade}',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: _getGradeColor(auraData.grade),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: kcBackgroundColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  'QGPA ${auraData.qgpa.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontSize: 14,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Aura Score',
+                  style: TextStyle(
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     color: kcTextMutedColor,
                   ),
                 ),
+                const SizedBox(height: 8),
+                Text(
+                  auraScoreText,
+                  style: const TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: kcTextColor,
+                    letterSpacing: -1.5,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    _buildMetaPill(
+                      'Grade ${auraData.grade}',
+                      color: _getGradeColor(auraData.grade),
+                      useFill: false,
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMetaPill(
+                      'QGPA ${auraData.qgpa.toStringAsFixed(2)}',
+                      color: kcTextMutedColor,
+                      useFill: false,
+                    ),
+                  ],
+                ),
+                if (scoreChange != null && scoreChange != 0) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    '${scoreChange > 0 ? '+' : ''}${scoreChange.toStringAsFixed(1)} today',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: scoreChange > 0 ? kcTealColor : kcRoseColor,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          SizedBox(
+            width: 84,
+            height: 84,
+            child: CustomPaint(
+              painter: _RadialProgressPainter(
+                value: auraScore / 5,
+                color: kcPrimaryColor,
+                backgroundColor: kcBorderColor.withOpacity(0.4),
               ),
-            ],
+              child: Center(
+                child: Text(
+                  auraScoreText,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: kcTextColor,
+                  ),
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -346,40 +303,19 @@ class _AuraDetailViewState extends State<AuraDetailView> {
 
   Widget _buildGradeInfoCard() {
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kcBorderColor.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.all(20),
+      decoration: _cardDecoration(),
       child: Row(
         children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              color: _getGradeColor(auraData.grade).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(18),
-            ),
-            child: Center(
-              child: Text(
-                auraData.grade,
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  color: _getGradeColor(auraData.grade),
-                ),
-              ),
+          Text(
+            auraData.grade,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w700,
+              color: _getGradeColor(auraData.grade),
             ),
           ),
-          const SizedBox(width: 20),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -387,17 +323,16 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                 Text(
                   _getGradeDescription(auraData.grade),
                   style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
                     color: kcTextColor,
-                    letterSpacing: -0.3,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   _getGradeSubtext(auraData.grade),
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     color: kcTextMutedColor.withOpacity(0.8),
                     height: 1.4,
                   ),
@@ -415,49 +350,17 @@ class _AuraDetailViewState extends State<AuraDetailView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Section Header
-        Row(
-          children: [
-            Container(
-              width: 4,
-              height: 24,
-              decoration: BoxDecoration(
-                color: kcTealColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(width: 12),
-            const Text(
-              'My Individual KPIs',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: kcTextColor,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ],
+        _buildSectionHeader(
+          title: 'My Individual KPIs',
+          subtitle: 'KPIs set by your team lead for this quarter',
         ),
-        const SizedBox(height: 8),
-        Text(
-          'KPIs set by your team lead for this quarter',
-          style: TextStyle(
-            fontSize: 14,
-            color: kcTextMutedColor.withOpacity(0.8),
-            height: 1.4,
-          ),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 10),
 
         // KPIs Content
         if (isLoadingKpis)
           Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kcBorderColor),
-            ),
+            padding: const EdgeInsets.all(24),
+            decoration: _cardDecoration(),
             child: const Center(
               child: CupertinoActivityIndicator(),
             ),
@@ -465,28 +368,18 @@ class _AuraDetailViewState extends State<AuraDetailView> {
         else if (myKpis.isEmpty)
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kcBorderColor),
-            ),
+            decoration: _cardDecoration(),
             child: Column(
               children: [
-                Icon(
-                  Icons.assignment_outlined,
-                  size: 40,
-                  color: kcTextMutedColor.withOpacity(0.5),
-                ),
-                const SizedBox(height: 12),
                 const Text(
-                  'No KPIs Set Yet',
+                  'No KPIs yet',
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: kcTextColor,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   'Your team lead hasn\'t set individual KPIs for you this quarter.',
                   textAlign: TextAlign.center,
@@ -502,29 +395,12 @@ class _AuraDetailViewState extends State<AuraDetailView> {
         else
           Container(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: kcBorderColor),
-            ),
+            decoration: _cardDecoration(),
             child: Column(
               children: [
                 // Average Achievement Header
                 Row(
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: kcTealColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.trending_up_rounded,
-                        color: kcTealColor,
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -540,7 +416,7 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                             '${myKpiAverageAchievement.toStringAsFixed(1)}%',
                             style: const TextStyle(
                               fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                               color: kcTextColor,
                             ),
                           ),
@@ -549,25 +425,26 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 4),
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: kcPrimaryColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        color: kcBackgroundColor,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: kcBorderColor),
                       ),
                       child: Text(
                         '${myKpis.length} KPIs',
                         style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: kcPrimaryColor,
+                          color: kcTextMutedColor,
                         ),
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 20),
-                const Divider(height: 1),
                 const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
 
                 // KPI List
                 ...myKpis.map((kpi) => _buildKpiItem(kpi)),
@@ -575,6 +452,61 @@ class _AuraDetailViewState extends State<AuraDetailView> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildSectionHeader({required String title, String? subtitle}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+            color: kcTextColor,
+          ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 12,
+              color: kcTextMutedColor.withOpacity(0.8),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMetaPill(String label,
+      {Color color = kcTextMutedColor, bool useFill = true}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: useFill ? color.withOpacity(0.08) : Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.18)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: kcSurfaceColor,
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: kcBorderColor.withOpacity(0.6)),
     );
   }
 
@@ -586,7 +518,7 @@ class _AuraDetailViewState extends State<AuraDetailView> {
             : kcRoseColor;
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -603,10 +535,10 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
-                  color: progressColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  color: progressColor.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
                   '${kpi.achievementPercentage.toStringAsFixed(0)}%',
@@ -627,7 +559,7 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                 kpi.description!,
                 style: TextStyle(
                   fontSize: 12,
-                  color: kcTextMutedColor,
+                  color: kcTextMutedColor.withOpacity(0.85),
                 ),
               ),
             ),
@@ -637,7 +569,7 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                 'Current: ${kpi.currentValue.toStringAsFixed(1)} / Target: ${kpi.targetValue.toStringAsFixed(1)} ${kpi.targetUnit ?? ''}',
                 style: TextStyle(
                   fontSize: 11,
-                  color: kcTextMutedColor,
+                  color: kcTextMutedColor.withOpacity(0.9),
                 ),
               ),
               const Spacer(),
@@ -645,18 +577,18 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                 'Weight: ${kpi.weight}%',
                 style: TextStyle(
                   fontSize: 11,
-                  color: kcTextMutedColor,
+                  color: kcTextMutedColor.withOpacity(0.9),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: (kpi.achievementPercentage / 100).clamp(0.0, 1.0),
-              minHeight: 6,
-              backgroundColor: Colors.grey[100],
+              minHeight: 4,
+              backgroundColor: kcBorderColor.withOpacity(0.35),
               valueColor: AlwaysStoppedAnimation<Color>(progressColor),
             ),
           ),
@@ -691,25 +623,15 @@ class _AuraDetailViewState extends State<AuraDetailView> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
         margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
+          color: kcSurfaceColor,
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isExpanded
-                ? kcPrimaryColor.withOpacity(0.3)
-                : kcBorderColor.withOpacity(0.5),
-            width: isExpanded ? 2 : 1,
+                ? kcPrimaryColor.withOpacity(0.35)
+                : kcBorderColor.withOpacity(0.6),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: isExpanded
-                  ? kcPrimaryColor.withOpacity(0.08)
-                  : Colors.black.withOpacity(0.02),
-              blurRadius: isExpanded ? 16 : 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
         child: Column(
           children: [
@@ -717,20 +639,12 @@ class _AuraDetailViewState extends State<AuraDetailView> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: kcPrimaryColor.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  child: Icon(
-                    _getPillarIcon(pillar.name),
-                    color: kcPrimaryColor,
-                    size: 22,
-                  ),
+                Icon(
+                  _getPillarIcon(pillar.name),
+                  color: kcPrimaryColor,
+                  size: 20,
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -738,42 +652,19 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                       Text(
                         pillar.name,
                         style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           color: kcTextColor,
-                          letterSpacing: -0.3,
                         ),
                       ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 3),
-                            decoration: BoxDecoration(
-                              color: kcBackgroundColor,
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: kcBorderColor),
-                            ),
-                            child: Text(
-                              sourceLabel,
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                                color: kcTextMutedColor.withOpacity(0.8),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${pillar.weight.round()}% Weight',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: kcTextMutedColor.withOpacity(0.6),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(height: 4),
+                      Text(
+                        '$sourceLabel · ${pillar.weight.round()}% weight',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: kcTextMutedColor.withOpacity(0.7),
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
@@ -786,20 +677,19 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                         Text(
                           '${pillar.score.round()}%',
                           style: const TextStyle(
-                            fontSize: 24,
+                            fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: kcTextColor,
-                            letterSpacing: -1,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        const SizedBox(width: 6),
                         AnimatedRotation(
                           turns: isExpanded ? 0.5 : 0,
                           duration: const Duration(milliseconds: 200),
                           child: Icon(
                             Icons.keyboard_arrow_down,
-                            color: kcTextMutedColor.withOpacity(0.5),
-                            size: 24,
+                            color: kcTextMutedColor.withOpacity(0.6),
+                            size: 22,
                           ),
                         ),
                       ],
@@ -808,39 +698,39 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 12),
             // Progress Bar
             Stack(
               children: [
                 Container(
-                  height: 6,
+                  height: 4,
                   width: double.infinity,
                   decoration: BoxDecoration(
                     color: kcBackgroundColor,
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(4),
                   ),
                 ),
                 FractionallySizedBox(
                   widthFactor: pillar.score / 100,
                   child: Container(
-                    height: 6,
+                    height: 4,
                     decoration: BoxDecoration(
                       color: _getScoreColor(pillar.score),
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 Text(
-                  'Contributes ',
+                  'Contribution ',
                   style: TextStyle(
                     fontSize: 11,
-                    color: kcTextMutedColor.withOpacity(0.6),
+                    color: kcTextMutedColor.withOpacity(0.7),
                   ),
                 ),
                 Text(
@@ -855,65 +745,38 @@ class _AuraDetailViewState extends State<AuraDetailView> {
             ),
             // Expanded Sub-metrics Section
             if (isExpanded && pillar.subMetrics.isNotEmpty) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: 12),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: kcBackgroundColor,
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: kcBorderColor.withOpacity(0.5)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.analytics_outlined,
-                          size: 16,
-                          color: kcPrimaryColor,
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Sub-Metrics Breakdown',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: kcTextColor,
-                          ),
-                        ),
-                      ],
+                    const Text(
+                      'Sub-metrics',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: kcTextColor,
+                      ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
                     ...pillar.subMetrics.map((sm) => _buildSubMetricRow(sm)),
                   ],
                 ),
               ),
             ] else if (isExpanded && pillar.subMetrics.isEmpty) ...[
-              const SizedBox(height: 20),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: kcBackgroundColor,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: kcTextMutedColor.withOpacity(0.6),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Detailed sub-metrics will be available soon',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: kcTextMutedColor.withOpacity(0.8),
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 12),
+              Text(
+                'Sub-metrics will be available soon.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: kcTextMutedColor.withOpacity(0.8),
                 ),
               ),
             ],
@@ -947,22 +810,12 @@ class _AuraDetailViewState extends State<AuraDetailView> {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          // Source Icon
-          Container(
-            width: 28,
-            height: 28,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: kcBorderColor.withOpacity(0.5)),
-            ),
-            child: Icon(
-              sourceIcon,
-              size: 14,
-              color: kcPrimaryColor,
-            ),
+          Icon(
+            sourceIcon,
+            size: 14,
+            color: kcTextMutedColor,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           // Name and Weight
           Expanded(
             child: Column(
@@ -987,19 +840,12 @@ class _AuraDetailViewState extends State<AuraDetailView> {
             ),
           ),
           // Score
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: _getScoreColor(sm.score).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '${sm.score.round()}%',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: _getScoreColor(sm.score),
-              ),
+          Text(
+            '${sm.score.round()}%',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: _getScoreColor(sm.score),
             ),
           ),
         ],
@@ -1009,41 +855,20 @@ class _AuraDetailViewState extends State<AuraDetailView> {
 
   Widget _buildInfoSection() {
     return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: kcBorderColor.withOpacity(0.6)),
-      ),
+      padding: const EdgeInsets.all(20),
+      decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: kcBackgroundColor,
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.lightbulb_outline_rounded,
-                  color: kcTextMutedColor,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Understanding your score',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: kcTextColor,
-                ),
-              ),
-            ],
+          const Text(
+            'Understanding your score',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: kcTextColor,
+            ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           _buildInfoItem(
             'Technical (35%)',
             'Daily reports, task completion, individual KPIs',
@@ -1060,38 +885,18 @@ class _AuraDetailViewState extends State<AuraDetailView> {
             'Growth (20%)',
             'Training, certifications, improvement trend',
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Divider(color: kcBorderColor.withOpacity(0.5)),
-          const SizedBox(height: 16),
-          // Automation indicator
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: kcTealColor.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.auto_awesome,
-                  size: 16,
-                  color: kcTealColor,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '~80% of your score is calculated automatically from your daily activities',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: kcTealColor,
-                      height: 1.4,
-                    ),
-                  ),
-                ),
-              ],
+          const SizedBox(height: 10),
+          Text(
+            'Most of your score is calculated automatically from daily activity.',
+            style: TextStyle(
+              fontSize: 12,
+              color: kcTextMutedColor.withOpacity(0.85),
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           // Update frequency
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1104,19 +909,12 @@ class _AuraDetailViewState extends State<AuraDetailView> {
                   color: kcTextMutedColor,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: kcPrimaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Daily at 11:59 PM',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: kcPrimaryColor,
-                  ),
+              Text(
+                'Daily at 11:59 PM',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: kcTextColor.withOpacity(0.85),
                 ),
               ),
             ],
@@ -1153,42 +951,25 @@ class _AuraDetailViewState extends State<AuraDetailView> {
   Widget _buildInfoItem(String label, String desc) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            margin: const EdgeInsets.only(top: 6),
-            width: 4,
-            height: 4,
-            decoration: const BoxDecoration(
-              color: kcTextMutedColor,
-              shape: BoxShape.circle,
-            ),
+      child: RichText(
+        text: TextSpan(
+          style: const TextStyle(
+            fontSize: 13,
+            color: kcTextMutedColor,
+            height: 1.5,
+            fontFamily: 'Inter',
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: RichText(
-              text: TextSpan(
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: kcTextMutedColor,
-                  height: 1.5,
-                  fontFamily: 'Inter',
-                ),
-                children: [
-                  TextSpan(
-                    text: '$label: ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: kcTextColor,
-                    ),
-                  ),
-                  TextSpan(text: desc),
-                ],
+          children: [
+            TextSpan(
+              text: '$label: ',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: kcTextColor,
               ),
             ),
-          ),
-        ],
+            TextSpan(text: desc),
+          ],
+        ),
       ),
     );
   }
@@ -1277,7 +1058,7 @@ class _RadialProgressPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2;
-    const strokeWidth = 14.0;
+    const strokeWidth = 10.0;
 
     // Draw Background
     final bgPaint = Paint()
@@ -1294,25 +1075,12 @@ class _RadialProgressPainter extends CustomPainter {
       ..strokeWidth = strokeWidth
       ..strokeCap = StrokeCap.round;
 
-    // Create a sweep gradient for the progress
-    final rect =
-        Rect.fromCircle(center: center, radius: radius - strokeWidth / 2);
-    final gradient = SweepGradient(
-      startAngle: -3.14159 / 2,
-      endAngle: -3.14159 / 2 + (2 * 3.14159),
-      tileMode: TileMode.repeated,
-      colors: const [
-        Color(0xFF6366F1), // Indigo
-        Color(0xFF8B5CF6), // Violet
-      ],
-    );
-
-    progressPaint.shader = gradient.createShader(rect);
+    progressPaint.color = color;
 
     final sweepAngle = 2 * 3.14159 * value.clamp(0.001, 1.0);
 
     canvas.drawArc(
-      rect,
+      Rect.fromCircle(center: center, radius: radius - strokeWidth / 2),
       -3.14159 / 2, // Start from top
       sweepAngle,
       false,

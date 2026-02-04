@@ -25,7 +25,7 @@ class LoginView extends StackedView<LoginViewModel> {
                 // Logo Section
                 Center(
                   child: Image.asset(
-                    'assets/images/schoolable_logo.png',
+                    'assets/images/worksight_logo.png',
                     width: 72,
                     height: 72,
                   ),

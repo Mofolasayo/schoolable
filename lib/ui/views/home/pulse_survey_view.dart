@@ -3,6 +3,7 @@ import 'package:stacked/stacked.dart';
 import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 /// Weekly Pulse Survey for quick team sentiment checks
 class PulseSurveyView extends StackedView<PulseSurveyViewModel> {
@@ -507,7 +508,7 @@ class PulseSurveyViewModel extends BaseViewModel {
         _submittedRating = survey['my_response'];
       }
     } catch (e) {
-      print('Error loading pulse survey: $e');
+      AppLogger.log('Error loading pulse survey: $e');
       _hasNoSurvey = true;
     } finally {
       setBusy(false);
@@ -546,7 +547,7 @@ class PulseSurveyViewModel extends BaseViewModel {
         _submittedRating = _selectedRating;
       }
     } catch (e) {
-      print('Error submitting pulse survey: $e');
+      AppLogger.log('Error submitting pulse survey: $e');
     } finally {
       _isSubmitting = false;
       rebuildUi();

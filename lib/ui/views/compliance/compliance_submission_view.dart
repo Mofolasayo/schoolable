@@ -5,6 +5,7 @@ import 'package:schoolable/app/app.locator.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
 import 'package:schoolable/ui/views/home/home_viewmodel.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ComplianceSubmissionView extends StatefulWidget {
   final ComplianceItem item;
@@ -55,14 +56,14 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
     });
 
     try {
-      bool success = false;
+      Map<String, dynamic>? result;
 
       if (widget.item.type == 'policy') {
         // Policy acknowledgement
-        success = await _backendService.acknowledgePolicy(widget.item.id);
+        result = await _backendService.acknowledgePolicy(widget.item.id);
       } else if (widget.item.type == 'upload' && _selectedFile != null) {
         // Document upload
-        success = await _backendService.submitComplianceDocument(
+        result = await _backendService.submitComplianceDocument(
           policyId: widget.item.id,
           filePath: _selectedFile!.path,
           fileName: _selectedFile!.path.split('/').last,
@@ -74,8 +75,11 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
           _isSubmitting = false;
         });
 
-        if (success) {
-          widget.item.status = 'complied';
+        if (result != null) {
+          final status = result['status']?.toString();
+          if (status != null && status.isNotEmpty) {
+            widget.item.status = status;
+          }
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Submitted successfully!'),
@@ -107,14 +111,49 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
     }
   }
 
+  Future<void> _openPolicyDocument() async {
+    final url = widget.item.policyFileUrl;
+    if (url == null || url.isEmpty) {
+      return;
+    }
+
+    final uri = Uri.tryParse(url);
+    if (uri == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid document link'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open document'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final canSubmit = !_isSubmitting &&
+        (widget.item.type == 'upload'
+            ? _selectedFile != null
+            : _isAccepted);
+
     return Scaffold(
       backgroundColor: kcBackgroundColor, // Use app background color
       appBar: AppBar(
-        title: const Text('Compliance Submission',
+        title: const Text('Compliance',
             style: TextStyle(
-                color: kcTextColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                color: kcTextColor, fontSize: 17, fontWeight: FontWeight.w600)),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
@@ -129,16 +168,9 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: kcSurfaceColor,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: kcBorderColor),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -148,31 +180,23 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
                         const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: kcPrimaryColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(999),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.assignment_late_outlined,
-                            size: 14, color: kcPrimaryColor),
-                        const SizedBox(width: 6),
-                        Text(
-                          'REQUIRED ACTION',
-                          style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: kcPrimaryColor,
-                              letterSpacing: 0.5),
-                        ),
-                      ],
+                    child: const Text(
+                      'Required action',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: kcPrimaryColor,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     widget.item.title,
                     style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
                       color: kcTextColor,
                       letterSpacing: -0.5,
                     ),
@@ -181,11 +205,50 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
                   Text(
                     widget.item.description,
                     style: const TextStyle(
-                      fontSize: 15,
+                      fontSize: 14,
                       color: kcTextMutedColor,
                       height: 1.5,
                     ),
                   ),
+                  if (widget.item.policyFileUrl != null &&
+                      widget.item.policyFileUrl!.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    InkWell(
+                      onTap: _openPolicyDocument,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: kcSurfaceColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: kcBorderColor),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.attach_file_rounded,
+                                size: 18, color: kcPrimaryColor),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                widget.item.policyFileName ??
+                                    'View attached document',
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: kcTextColor,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Icon(Icons.open_in_new_rounded,
+                                size: 16, color: kcTextMutedColor),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 20),
                   const Divider(color: kcBorderColor),
                   const SizedBox(height: 12),
@@ -197,8 +260,8 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
                       Text(
                         'Due by ${widget.item.deadline.toString().split(' ')[0]}',
                         style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                           color: kcAmberColor,
                         ),
                       ),
@@ -208,7 +271,7 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
               ),
             ),
 
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
 
             // Action Section
             Text(
@@ -216,8 +279,8 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
                   ? 'Document Upload'
                   : 'Acknowledgement',
               style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
                 color: kcTextColor,
               ),
             ),
@@ -235,7 +298,7 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
               width: double.infinity,
               height: 56,
               child: ElevatedButton(
-                onPressed: _isSubmitting ? null : _submit,
+                onPressed: canSubmit ? _submit : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: kcPrimaryColor,
                   foregroundColor: Colors.white,
@@ -243,7 +306,8 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 0,
-                  disabledBackgroundColor: kcPrimaryColor.withOpacity(0.5),
+                  disabledBackgroundColor: kcBorderColor,
+                  disabledForegroundColor: kcTextMutedColor,
                 ),
                 child: _isSubmitting
                     ? const SizedBox(
@@ -285,11 +349,11 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
             height: 220,
             width: double.infinity,
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: kcSurfaceColor,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: _selectedFile != null ? kcTealColor : kcBorderColor,
-                width: 2,
+                width: 1,
               ),
             ),
             child: _selectedFile != null
@@ -329,8 +393,8 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
                         'Tap to upload document',
                         style: TextStyle(
                           color: kcTextColor,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -353,11 +417,11 @@ class _ComplianceSubmissionViewState extends State<ComplianceSubmissionView> {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: kcSurfaceColor,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color: _isAccepted ? kcPrimaryColor : kcBorderColor,
-            width: _isAccepted ? 1.5 : 1),
+            width: 1),
       ),
       child: GestureDetector(
         onTap: () {

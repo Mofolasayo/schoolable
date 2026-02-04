@@ -5,6 +5,8 @@ import 'package:schoolable/app/app.router.dart';
 import 'package:stacked_services/stacked_services.dart';
 import 'package:schoolable/services/backend_api_service.dart';
 import 'package:schoolable/ui/common/app_colors.dart';
+import 'package:intl/intl.dart';
+import 'package:schoolable/services/logging_service.dart';
 
 class CompleteProfileViewModel extends BaseViewModel {
   final String email;
@@ -22,10 +24,13 @@ class CompleteProfileViewModel extends BaseViewModel {
   final _backend = locator<BackendApiService>();
   final _dialogService = locator<DialogService>();
 
+  bool isLoadingReferenceData = false;
+  String? referenceDataError;
+
   Future<void> _debugCheckAuth() async {
-    print('🔍 CompleteProfileViewModel initialized');
-    print('📧 Email: $email');
-    print('👤 Full Name: $fullName');
+    AppLogger.log('🔍 CompleteProfileViewModel initialized');
+    AppLogger.log('📧 Email: $email');
+    AppLogger.log('👤 Full Name: $fullName');
     await _backend.debugAuthState();
   }
 
@@ -42,28 +47,13 @@ class CompleteProfileViewModel extends BaseViewModel {
   final cityController = TextEditingController();
   final stateController = TextEditingController();
 
-  // Department options based on UPDATED requirements
-  final List<String> departments = [
-    'Operations',
-    'Customer Support',
-    'Development',
-    'Sales',
-    'HR',
-    'Finance',
-    'Executive office',
-    'Pos operations',
-    'Growth',
-    'Admin',
-  ];
+  List<String> departments = [];
 
   // Gender options - restricted
-  final List<String> genders = [
-    'Male',
-    'Female',
-  ];
+  List<String> genders = [];
 
-  // Employee Levels
-  final List<int> employeeLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  // Employee Levels loaded from backend
+  List<int> employeeLevels = [];
 
   String? selectedDepartment;
   String? selectedGender;
@@ -72,6 +62,40 @@ class CompleteProfileViewModel extends BaseViewModel {
 
   DateTime? dateJoined;
   DateTime? dateOfBirth;
+
+  Future<void> initialize() async {
+    await loadReferenceData();
+  }
+
+  Future<void> loadReferenceData() async {
+    isLoadingReferenceData = true;
+    referenceDataError = null;
+    rebuildUi();
+
+    try {
+      final deptData = await _backend.getDepartments();
+      departments = deptData;
+
+      final jobLevels = await _backend.getJobLevels();
+      employeeLevels = jobLevels
+          .map((level) => level['levelNumber'])
+          .whereType<int>()
+          .toList();
+      employeeLevels.sort();
+
+      final referenceData = await _backend.getReferenceData();
+      final genderList = referenceData['genders'];
+      if (genderList is List) {
+        genders = genderList.whereType<String>().toList();
+      }
+    } catch (e) {
+      referenceDataError = 'Failed to load reference data';
+      AppLogger.log('Error loading reference data: $e');
+    } finally {
+      isLoadingReferenceData = false;
+      rebuildUi();
+    }
+  }
 
   void setDepartment(String? value) {
     selectedDepartment = value;
@@ -149,21 +173,7 @@ class CompleteProfileViewModel extends BaseViewModel {
   }
 
   String formatDate(DateTime date) {
-    final months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    return DateFormat('MMM d, y').format(date);
   }
 
   Future<void> completeProfile() async {
@@ -255,7 +265,7 @@ class CompleteProfileViewModel extends BaseViewModel {
       _nav.clearStackAndShow(Routes.homeView);
     } catch (e) {
       setBusy(false);
-      print('❌ Error completing profile: $e');
+      AppLogger.log('❌ Error completing profile: $e');
 
       await _dialogService.showDialog(
         title: 'Save Failed',
@@ -276,7 +286,7 @@ class CompleteProfileViewModel extends BaseViewModel {
       await _dialogService.showDialog(
         title: 'Check Your Email',
         description:
-            'Please open your email app and look for the verification email from Schoolable.',
+            'Please open your email app and look for the verification email from WorkSight.',
         buttonTitle: 'Got it',
       );
     } catch (e) {

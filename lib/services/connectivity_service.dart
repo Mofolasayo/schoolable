@@ -34,6 +34,9 @@ class ConnectivityService {
     // Check initial status
     final results = await _connectivity.checkConnectivity();
     _updateOnlineStatus(results);
+    if (_isOnline) {
+      syncPendingChanges();
+    }
 
     // Listen for changes
     _subscription = _connectivity.onConnectivityChanged.listen((results) {
@@ -144,16 +147,45 @@ class ConnectivityService {
 
         case 'CHECK_IN':
           if (body != null) {
-            // Re-attempt check-in
-            // Note: This might create duplicate records, need to handle on backend
-            return true;
+            String? photoUrl = body['photo_url'] as String?;
+            final photoPath = body['photo_path'] as String?;
+            if ((photoUrl == null || photoUrl.isEmpty) &&
+                photoPath != null &&
+                photoPath.isNotEmpty) {
+              try {
+                final upload = await _apiService.uploadCheckInPhoto(photoPath);
+                photoUrl = upload['url'] as String?;
+              } catch (e) {
+                debugPrint('❌ Failed to upload queued photo: $e');
+              }
+            }
+
+            final result = await _apiService.checkIn(
+              latitude: (body['latitude'] as num).toDouble(),
+              longitude: (body['longitude'] as num).toDouble(),
+              accuracy: (body['accuracy'] as num?)?.toDouble(),
+              address: body['address'] as String?,
+              photoUrl: photoUrl,
+              deviceInfo: body['device_info'] as String?,
+              deviceId: body['device_id'] as String?,
+              note: body['note'] as String?,
+              isRemote: body['is_remote'] == true,
+              livenessScore: (body['liveness_score'] as num?)?.toDouble(),
+              livenessType: body['liveness_type'] as String?,
+              consentGiven: body['consent_given'] as bool?,
+              consentVersion: body['consent_version'] as String?,
+              retentionDays: body['retention_days'] as int?,
+            );
+            return result != null;
           }
           break;
 
         case 'CHECK_OUT':
           if (body != null) {
-            // Re-attempt check-out
-            return true;
+            final result = await _apiService.checkOut(
+              note: body['note'] as String?,
+            );
+            return result != null;
           }
           break;
 
